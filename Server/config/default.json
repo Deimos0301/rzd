@@ -1,0 +1,21 @@
+{
+    "port": 5000,
+    "log": "debug",
+    "mssql": {
+        "server": "S48-SVN",
+        "user": "sa",
+        "stream": false,
+        "password": "sa2008_s48",
+        "database": "MISS_BASE_LAKE",
+        "requestTimeout": 40000,
+        "options": {
+            "requestTimeout": 40000,
+            "encrypt": false
+        },
+        "pool": {
+            "max": 20,
+            "min": 0,
+            "idleTimeoutMillis": 40000
+        }
+    }
+}

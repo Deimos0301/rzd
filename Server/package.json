@@ -1,0 +1,21 @@
+{
+  "name": "rzd",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "jsgjs": "^0.4.0",
+    "json-beautify": "^1.1.1",
+    "mssql": "^9.1.1",
+    "path": "^0.12.7",
+    "stream": "^0.0.2",
+    "tedious-connection-pool": "^1.0.5"
+  }
+}
