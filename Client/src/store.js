@@ -2,29 +2,31 @@
 import { action, observable, makeObservable } from 'mobx';
 
 class Store {
-    filterOpened = false;
-    fieldsOpened = false;
     tables = [];
-    filterElements = [];
+    filterElements = []; // Массив элементов JSX
+    filterItems = [];
     gridStruct = [];
     linesCount = 1;
-    //filterItems = [];
+    filterOpened = false;
+    fieldsOpened = false;
 
     constructor() {
         makeObservable(this, {
             tables: observable,
             filterElements: observable,
-            linesCount: observable,
+            filterItems: observable,
             gridStruct: observable,
+            linesCount: observable,
             filterOpened: observable,
             fieldsOpened: observable,
 
             setTables: action,
-            setGridStruct: action,
-            setFilterOpened: action,
-            setFieldsOpened: action,
             setFilterElements: action,
-            setLinesCount: action
+            setFilterItems: action,
+            setGridStruct: action,
+            setLinesCount: action,
+            setFilterOpened: action,
+            setFieldsOpened: action
         });        
     }
 
@@ -47,6 +49,8 @@ class Store {
     setTables = (data) => { this.tables = [...data]; }
 
     setFilterElements = (data) => { this.filterElements = [...data]; }
+
+    setFilterItems = (data) => { this.filterItems = [...data]; }
 
     setGridStruct = (data) => { this.gridStruct = [...data]; }
 

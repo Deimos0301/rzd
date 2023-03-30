@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { observer } from 'mobx-react';
+import { toJS } from 'mobx';
 import store from './store';
 import { v4 as uuidv4 } from 'uuid';
 import { Toolbar, Item } from 'devextreme-react/toolbar';
@@ -14,45 +15,46 @@ class Filter extends Component {
             filterElements: [<FilterItem fk_fld="PROD_KIND_ID" oper="=" disabled={true} addFilterItem={this.addFilterItem} />]
         }
 
-        // let items = [...this.state.filterElements];
-        // items.push( {atrib: 'JOPA', id: 1} );
-        // store.setFilterElements(items);
+        const items = [...store.filterItems];
+        if (!items.length) {
+            items.push({ uid: uuidv4(), fk_fld: "PROD_KIND_ID", oper: "=" });
+            store.setFilterItems(items);
+        }
+    }
+
+    componentDidMount = () => {
+        // const items = [...store.filterItems];
+        // items.push( {uid: uuidv4(), fk_fld: "PROD_KIND_ID", oper: "="} );
+        // store.setFilterItems(items);
     }
 
     deleteFilterItem = (id) => {
         let arr = [...this.state.filterElements];
         arr.forEach((el, idx) => {
-            if (el.props.id === id) {
-                console.log(idx);
+            if (el.props.uid === uid) {
                 arr.splice(idx, 1);
                 return;
             }
         });
+
         this.setState({ filterElements: arr }, () => {
-            const c = this.state.filterElements.length;
-            this.props.updateFilterHeight(c);
+            const cnt = this.state.filterElements.length;
+            this.props.updateFilterHeight(cnt);
         });
     }
 
     addFilterItem = () => {
         let items = [...this.state.filterElements];
-        const id = uuidv4();
+        const uid = uuidv4();
 
-        console.log(id);
-        items.push(<FilterItem id={id} addFilterItem={this.addFilterItem} deleteFilterItem={this.deleteFilterItem} />);
+        items.push(<FilterItem uid={uid} addFilterItem={this.addFilterItem} deleteFilterItem={this.deleteFilterItem} />);
+
+        console.log(toJS(store.filterItems))
 
         this.setState({ filterElements: items }, () => {
-            const c = this.state.filterElements.length;
-            this.props.updateFilterHeight(c);
+            const cnt = this.state.filterElements.length;
+            this.props.updateFilterHeight(cnt);
         });
-
-
-        //        this.props.updateFilterHeight(items.length);
-
-        // let arr = [...store.filterItems];
-        // arr.push({atrib: 'JOPA2', id: id});
-
-        // store.setFilterItems(arr);
     }
 
     render() {

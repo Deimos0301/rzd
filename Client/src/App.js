@@ -2,7 +2,7 @@ import React from 'react';
 import 'devextreme/dist/css/dx.common.css';
 import 'devextreme/dist/css/dx.carmine.compact.css';
 import CustomStore from 'devextreme/data/custom_store';
-import Drawer from 'devextreme-react/drawer';
+import { LoadPanel } from 'devextreme-react/load-panel';
 import { Toolbar, Item } from 'devextreme-react/toolbar';
 import DataGrid, {
     RemoteOperations, Scrolling, GroupPanel, Paging, Pager, Grouping,
@@ -22,38 +22,6 @@ import Filter from './filter.js';
 
 const isNotEmpty = (value) => value !== undefined && value !== null && value !== '';
 
-var dataSource = new CustomStore({
-    load: async (loadOptions) => {
-        let params = '?';
-
-        [
-            'filter',
-            'group',
-            'groupSummary',
-            'parentIds',
-            'requireGroupCount',
-            'requireTotalCount',
-            'searchExpr',
-            'searchOperation',
-            'searchValue',
-            'select',
-            'sort',
-            'skip',
-            'take',
-            'totalSummary',
-            'userData'
-        ].forEach(i => {
-            if (i in loadOptions && isNotEmpty(loadOptions[i])) {
-                params += `${i}=${JSON.stringify(loadOptions[i])}&`;
-            }
-        });
-
-        params = params.slice(0, -1);
-
-        return await getData(params);
-    }
-});
-
 let formatter = new Intl.NumberFormat("ru", {
     style: "decimal",
     minimumFractionDigits: 0
@@ -64,13 +32,50 @@ const GroupCell = (el, data) => {
 };
 
 class App extends React.Component {
+    gridSource = new CustomStore({
+        load: async (loadOptions) => {
+            let params = '?';
+    
+            [
+                'filter',
+                'group',
+                'groupSummary',
+                'parentIds',
+                'requireGroupCount',
+                'requireTotalCount',
+                'searchExpr',
+                'searchOperation',
+                'searchValue',
+                'select',
+                'sort',
+                'skip',
+                'take',
+                'totalSummary',
+                'userData'
+            ].forEach(i => {
+                if (i in loadOptions && isNotEmpty(loadOptions[i])) {
+                    params += `${i}=${JSON.stringify(loadOptions[i])}&`;
+                }
+            });
+    
+            params = params.slice(0, -1);
+    
+            const data = await getData(params);
+            this.setState({loadPanelVisible: false});
+            this.grid.current.instance.endUpdate();
+            return data;
+        }
+    });
+    
     constructor(props) {
         super(props);
 
         this.state = {
             filterHeight: "118px",
             filterValue: [],
-            columns: []
+            columns: [],
+            dataSource: [],
+            loadPanelVisible: false
         }
 
         this.grid = React.createRef();
@@ -81,6 +86,7 @@ class App extends React.Component {
     }
 
     componentDidMount = async () => {
+        this.setState({loadPanelVisible: true});
         await store.getTables();
         await store.getGridStruct();
 
@@ -92,7 +98,6 @@ class App extends React.Component {
         const grid = this.grid.current.instance;
 
         grid.beginUpdate();
-        //        console.log(store.tables)
 
         let cols = [];
 
@@ -123,9 +128,8 @@ class App extends React.Component {
             ['DATE_IN', 'between', [MinDate, MaxDate]]
         ];
 
-        this.setState({ columns: cols }, () => {
-            //this.setState({ filterValue: flt }, () => {
-            grid.endUpdate();
+        this.setState({ dataSource: this.gridSource, columns: cols }, () => {
+  //          grid.endUpdate();
             cols.forEach(col => {
                 if (col.tab_name) {
                     const src = store.tables.find(item => item.fk_display_fld === col.dataField);
@@ -134,6 +138,10 @@ class App extends React.Component {
                 //});
             });
         });
+    }
+
+    contentReady = () => {
+        this.setState({loadPanelVisible: false});
     }
 
     customizeDate = (cellInfo) => {
@@ -160,15 +168,15 @@ class App extends React.Component {
 
     updateFilterHeight = (count) => {
         const h = (86 + count * 32).toString() + 'px';
-        //console.log(h);
+        //console.log(count);
         this.setState({filterHeight: h});
     }
 
     render() {
-        const filterHeight = (this.state.filterHeight).toString;
-
         return (
             <>
+                <LoadPanel visible={this.state.loadPanelVisible} />
+
                 <Toolbar>
                     <Item
                         location="before"
@@ -192,7 +200,7 @@ class App extends React.Component {
 
                     <BoxItem ratio={2}>
                         <Box direction='col' width="100%" height="100%">
-                            <BoxItem ratio={0} baseSize={filterHeight} visible={store.filterOpened}>
+                            <BoxItem ratio={0} baseSize="auto" visible={store.filterOpened}>
                                 <Container title="Условия фильтра" height={this.state.filterHeight} closeButton={true} onCloseClick={this.closeFilter}>
                                     <Filter updateFilterHeight={this.updateFilterHeight} />
                                 </Container>
@@ -201,7 +209,7 @@ class App extends React.Component {
                                 <Container title="Результат запроса">
                                     <DataGrid
                                         ref={this.grid}
-                                        dataSource={dataSource}
+                                        dataSource={this.state.dataSource}
                                         height="96%"
                                         //width="100%"
                                         showBorders={true}
@@ -217,6 +225,7 @@ class App extends React.Component {
                                         filterValue={this.state.filterValue}
                                         onRowExpanding={this.rowExpanding}
                                         columns={this.state.columns}
+                                        // onContentReady={this.contentReady}
                                     >
                                         <RemoteOperations groupPaging={true} />
                                         <Scrolling mode="virtual" />
