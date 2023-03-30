@@ -1,13 +1,32 @@
 //import React, {Component} from "react";
-import { action, observable, makeObservable, computed } from 'mobx';
+import { action, observable, makeObservable } from 'mobx';
 
 class Store {
-    // constructor() {
-    //     makeObservable(this);        
-    // }
-
-    tables = observable([]);
+    filterOpened = false;
+    fieldsOpened = false;
+    tables = [];
+    filterElements = [];
     gridStruct = [];
+    linesCount = 1;
+    //filterItems = [];
+
+    constructor() {
+        makeObservable(this, {
+            tables: observable,
+            filterElements: observable,
+            linesCount: observable,
+            gridStruct: observable,
+            filterOpened: observable,
+            fieldsOpened: observable,
+
+            setTables: action,
+            setGridStruct: action,
+            setFilterOpened: action,
+            setFieldsOpened: action,
+            setFilterElements: action,
+            setLinesCount: action
+        });        
+    }
 
     getTables = async () => {
         if (this.tables.length > 0) return;
@@ -21,17 +40,21 @@ class Store {
     getGridStruct = async () => {
         const arr = await fetch('/api/getGridStruct');
         const js = await arr.json();
-//console.log(js)
+
         this.setGridStruct(js);
     }
 
-    setTables = async (data) => {
-        this.tables = [...data];
-    }
+    setTables = (data) => { this.tables = [...data]; }
 
-    setGridStruct = async (data) => {
-        this.gridStruct = [...data];
-    }
+    setFilterElements = (data) => { this.filterElements = [...data]; }
+
+    setGridStruct = (data) => { this.gridStruct = [...data]; }
+
+    setFilterOpened = (data) => { this.filterOpened = data; }
+
+    setFieldsOpened = (data) => { this.fieldsOpened = data; }
+
+    setLinesCount = (data) => { this.linesCount = data; }
 }
 
 const store = new Store();

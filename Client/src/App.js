@@ -1,6 +1,6 @@
 import React from 'react';
 import 'devextreme/dist/css/dx.common.css';
-import 'devextreme/dist/css/dx.light.css';
+import 'devextreme/dist/css/dx.carmine.compact.css';
 import CustomStore from 'devextreme/data/custom_store';
 import Drawer from 'devextreme-react/drawer';
 import { Toolbar, Item } from 'devextreme-react/toolbar';
@@ -9,13 +9,16 @@ import DataGrid, {
     Column, SearchPanel, HeaderFilter, GroupItem, Summary, TotalItem,
     FilterPanel, FilterBuilderPopup, FilterRow
 } from 'devextreme-react/data-grid';
-import JSG from 'jsgjs';
+import './App.css';
 import { observer } from 'mobx-react';
+import Container from './containter';
+import Box, { Item as BoxItem } from 'devextreme-react/box';
+
 import ruMessages from "devextreme/localization/messages/ru.json";
 import { locale, loadMessages } from "devextreme/localization";
 
 import store from './store';
-import { Col } from 'devextreme-react/responsive-box';
+import Filter from './filter.js';
 
 const isNotEmpty = (value) => value !== undefined && value !== null && value !== '';
 
@@ -48,8 +51,7 @@ var dataSource = new CustomStore({
         params = params.slice(0, -1);
 
         return await getData(params);
-    },
-    //key: "COUNTRY_ID"
+    }
 });
 
 let formatter = new Intl.NumberFormat("ru", {
@@ -59,31 +61,14 @@ let formatter = new Intl.NumberFormat("ru", {
 
 const GroupCell = (el, data) => {
     el.append(data.value + ` (Строк: ${data.data.count}, Вес: ${formatter.format(data.data.summa)} т)`);
-    // return;
-    // let S = el.text + ` (Строк: ${el.data.summary[0]}, Вес: ${formatter.format(el.data.summary[1])} т)`;
-
-    // if (el.data.isContinuation)
-    //     S += '    <...продолжение...>';
-    // return <div>{S}</div>
 };
-
-const cellRender = (options) => {
-    const tab = store.tables.find(item => item.tab_name === options.column.tab_name);
-    //console.log(options.column);
-    const fld = options.column.dataField;
-    const val = tab.data.find(item => item.value === options.data[fld]);
-
-    return <div>{val.text}</div>
-}
-
-//var arrStations = [];
 
 class App extends React.Component {
     constructor(props) {
         super(props);
 
         this.state = {
-            filterOpened: false,
+            filterHeight: "118px",
             filterValue: [],
             columns: []
         }
@@ -96,10 +81,6 @@ class App extends React.Component {
     }
 
     componentDidMount = async () => {
-        const grid = this.grid.current.instance;
-
-        grid.beginUpdate();
-
         await store.getTables();
         await store.getGridStruct();
 
@@ -108,7 +89,10 @@ class App extends React.Component {
         let MinDate = new Date(MaxDate);
         MinDate.setMonth(MaxDate.getMonth() - 2);
 
-        //console.log(this.filter)
+        const grid = this.grid.current.instance;
+
+        grid.beginUpdate();
+        //        console.log(store.tables)
 
         let cols = [];
 
@@ -140,14 +124,14 @@ class App extends React.Component {
         ];
 
         this.setState({ columns: cols }, () => {
-            this.setState({ filterValue: flt }, () => {
-                grid.endUpdate();
-                cols.forEach(col => {
-                    if (col.tab_name) {
-                        const src = store.tables.find(item => item.fk_display_fld === col.dataField);
-                        grid.columnOption(col.dataField, 'headerFilter.dataSource', src.data);
-                    }
-                });
+            //this.setState({ filterValue: flt }, () => {
+            grid.endUpdate();
+            cols.forEach(col => {
+                if (col.tab_name) {
+                    const src = store.tables.find(item => item.fk_display_fld === col.dataField);
+                    grid.columnOption(col.dataField, 'headerFilter.dataSource', src.data);
+                }
+                //});
             });
         });
     }
@@ -162,100 +146,121 @@ class App extends React.Component {
         grid.collapseAll(e.key.length - 1);
     }
 
+    openedChange = () => {
+        store.setFilterOpened(!store.filterOpened);
+    }
+
+    closeFields = (e) => {
+        store.setFieldsOpened(false);
+    }
+
+    closeFilter = (e) => {
+        store.setFilterOpened(false);
+    }
+
+    updateFilterHeight = (count) => {
+        const h = (86 + count * 32).toString() + 'px';
+        //console.log(h);
+        this.setState({filterHeight: h});
+    }
+
     render() {
+        const filterHeight = (this.state.filterHeight).toString;
+
         return (
             <>
                 <Toolbar>
-                    <Item location="before"
+                    <Item
+                        location="before"
                         widget="dxButton"
-                        options={{ icon: "filter", onClick: () => { this.setState({ filterOpened: !this.state.filterOpened }); console.log(this.state.filterOpened) } }}
-                    ></Item>
+                        options={{ icon: "filter", type: store.filterOpened ? 'danger' : 'normal', text: "Условия", onClick: () => { store.setFilterOpened(!store.filterOpened) } }} >
+                    </Item>
+
+                    <Item
+                        location="before"
+                        widget="dxButton"
+                        options={{ icon: "fields", type: store.fieldsOpened ? 'danger' : 'normal', text: "Столбцы", onClick: () => { store.setFieldsOpened(!store.fieldsOpened) } }} >
+                    </Item>
                 </Toolbar>
 
-                <Drawer
-                    opened={this.state.filterOpened}
-                    component={Filter}
-                    openedStateMode='shrink'
-                    closeOnOutsideClick={true}
-                    position='left'
-                    revealMode='slide'
-                    height="100%" >
+                <div style={{ marginBottom: "4px" }} />
 
-                    <DataGrid
-                        ref={this.grid}
-                        dataSource={dataSource}
-                        height="96vh"
-                        //width="100%"
-                        showBorders={true}
-                        wordWrapEnabled={true}
-                        // columnAutoWidth={true}
-                        showRowLines={true}
-                        hoverStateEnabled={true}
-                        focusedRowEnabled={false}
-                        allowColumnResizing={true}
-                        allowColumnReordering={true}
-                        rowAlternationEnabled={true}
-                        columnResizingMode="widget"
-                        columnWidth={300}
-                        filterValue={this.state.filterValue}
-                        onRowExpanding={this.rowExpanding}
-                        columns={this.state.columns}
-                    >
-                        <RemoteOperations groupPaging={true} />
-                        <Scrolling mode="virtual" />
-                        <Grouping autoExpandAll={false} />
-                        <GroupPanel visible={true} />
-                        <SearchPanel visible={false} />
-                        <HeaderFilter visible={true} height="700" width="600" allowSearch={true} />
-                        <FilterPanel visible={true} />
-                        <FilterRow visible={false} />
-                        <FilterBuilderPopup />
+                <Box direction='row' width="100%" height="calc(100vh - 35px)">
+                    <BoxItem ratio={0} baseSize="350px" visible={store.fieldsOpened}>
+                        <Container title="Столбцы" closeButton={true} onCloseClick={this.closeFields} />
+                    </BoxItem>
 
-                        <Summary>
-                            <GroupItem
-                                column="RN"
-                                summaryType="count"
-                            />
-                            <GroupItem
-                                column="CARGO_TONNAGE"
-                                summaryType="sum"
-                            />
-                            <TotalItem
-                                column="DATE_OUT"
-                                summaryType="count"
-                            />
-                        </Summary>
+                    <BoxItem ratio={2}>
+                        <Box direction='col' width="100%" height="100%">
+                            <BoxItem ratio={0} baseSize={filterHeight} visible={store.filterOpened}>
+                                <Container title="Условия фильтра" height={this.state.filterHeight} closeButton={true} onCloseClick={this.closeFilter}>
+                                    <Filter updateFilterHeight={this.updateFilterHeight} />
+                                </Container>
+                            </BoxItem>
+                            <BoxItem ratio={2}>
+                                <Container title="Результат запроса">
+                                    <DataGrid
+                                        ref={this.grid}
+                                        dataSource={dataSource}
+                                        height="96%"
+                                        //width="100%"
+                                        showBorders={true}
+                                        wordWrapEnabled={true}
+                                        showRowLines={true}
+                                        hoverStateEnabled={true}
+                                        focusedRowEnabled={false}
+                                        allowColumnResizing={true}
+                                        allowColumnReordering={true}
+                                        rowAlternationEnabled={true}
+                                        columnResizingMode="widget"
+                                        columnWidth={300}
+                                        filterValue={this.state.filterValue}
+                                        onRowExpanding={this.rowExpanding}
+                                        columns={this.state.columns}
+                                    >
+                                        <RemoteOperations groupPaging={true} />
+                                        <Scrolling mode="virtual" />
+                                        <Grouping autoExpandAll={false} />
+                                        <GroupPanel visible={true} />
+                                        <SearchPanel visible={false} />
+                                        <HeaderFilter visible={true} height="700" width="600" allowSearch={true} />
+                                        <FilterPanel visible={false} />
+                                        <FilterRow visible={false} />
+                                        <FilterBuilderPopup />
 
-                        <Paging
-                            //defaultPageSize={500}
-                            pageSize={500}
-                        />
-                        <Pager
-                            visible={true}
-                            allowedPageSizes={true}
-                            showPageSizeSelector={true}
-                            displayMode="full"
-                            showInfo={true}
-                            showNavigationButtons={true}
-                        />
+                                        <Summary>
+                                            <GroupItem
+                                                column="RN"
+                                                summaryType="count"
+                                            />
+                                            <GroupItem
+                                                column="CARGO_TONNAGE"
+                                                summaryType="sum"
+                                            />
+                                            <TotalItem
+                                                column="DATE_OUT"
+                                                summaryType="count"
+                                            />
+                                        </Summary>
 
-                        {/* {this.state.columns.map(col => {
-                    //let src = store.tables.find(item => item.tab_name === 'RZD.SPR_Station');
-                    return (
-                        <Column
-                            key={col.dataField}
-                            dataField={col.dataField}
-                            caption={col.caption}
-                            dataType={col.dataType}
-                            width={col.width}
-                            groupIndex={col.groupIndex}
-                            groupCellRender={GroupCell}
-                            tab_name={col.tab_name}
-                        />)
-                }
-                )} */}
-                    </DataGrid>
-                </Drawer>
+                                        <Paging
+                                            //defaultPageSize={500}
+                                            pageSize={500}
+                                        />
+                                        <Pager
+                                            visible={true}
+                                            allowedPageSizes={true}
+                                            showPageSizeSelector={true}
+                                            displayMode="full"
+                                            showInfo={true}
+                                            showNavigationButtons={true}
+                                        />
+                                    </DataGrid>
+                                </Container>
+                            </BoxItem>
+                        </Box>
+                    </BoxItem>
+                </Box>
             </>
         );
     }
@@ -280,12 +285,6 @@ const getData = async (params) => {
     //     }
     // }
     return js;
-}
-
-class Filter extends React.Component {
-    render() {
-        return <div className='filter_content' style={{ width: "800px", height: "100%", background: "aliceblue" }}>FILTER</div>
-    }
 }
 
 export default observer(App);
