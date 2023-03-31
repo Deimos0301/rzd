@@ -40,8 +40,12 @@ class Store {
 
         arr.forEach(el => {
             //const sql = `select ${el.PK_FLD} as value, ${el.PK_DISPLAY_FLD} as "text" from ${el.TAB_NAME} order by ${el.PK_DISPLAY_FLD}`;
-            if (el.PK_FLD) {
-                const sql = `select ${el.PK_FLD} as value, ${el.PK_DISPLAY_FLD} as "text" from ${el.TAB_NAME} order by ${el.PK_DISPLAY_FLD}`;
+            if (el.PK_FLD && el.TAB_NAME != 'RZD.Data') {
+                let where = '(1=1)'
+                if (el.FK_FLD === 'PROD_KIND_ID')
+                    where = 'PROD_KIND_ID <> 0';
+                const sql = `select ${el.PK_FLD} as value, ${el.PK_DISPLAY_FLD} as "text" from ${el.TAB_NAME} where ${where} order by ${el.PK_DISPLAY_FLD}`;
+          
                 if (!sqls.find(item => item.sql === sql))
                     sqls.push({ SQL: sql, data: [] });
                 el.SQL = sql;
