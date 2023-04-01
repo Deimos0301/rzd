@@ -18,7 +18,7 @@ class SqlDB {
         this.pool = await sql.connect(config.mssql);
     }
 
-    loadSprs = async () => {
+    loadTables = async () => {
         let promises = [];
 
         tabs.map( (tab) => {

@@ -26,8 +26,9 @@ app.use(express.static(path.join(__dirname, './build')));
 pool.connect().then(async (p) => {
     app.locals.db = p;
 
-    await store.getSpr();
-    //store.sprs.forEach(spr => console.log({tab_name: spr.tab_name, fk_fld: spr.fk_fld, fk_display_fld: spr.fk_display_fld}))
+    await store.getTables();
+    //console.log(filterToSQL(JSON.parse('["REGION_NAME_IN","=","АЛТАЙСКИЙ КРАЙ"]'), "("));
+    //store.tables.forEach(spr => console.log({tab_name: spr.tab_name, fk_fld: spr.fk_fld, fk_display_fld: spr.fk_display_fld}))
 
     const server = app.listen(config.port, () => {
         const port = server.address().port;
@@ -48,7 +49,7 @@ app.get('/api/query', async (req, res) => {
 });
 
 app.get('/api/getSpr', (req, res) => {
-    res.json(store.sprs);
+    res.json(store.tables);
 });
 
 app.get('/api/getGridStruct', async (req, res) => {
@@ -58,7 +59,6 @@ app.get('/api/getGridStruct', async (req, res) => {
 
 let groupCount = 0;
 
-const TAB = 'RZD.RZD_Data#02';
 const DefaultOrder = 'DATE_IN';
 
 const filterToSQL = (item, res) => {
@@ -67,13 +67,20 @@ const filterToSQL = (item, res) => {
     if (!res)
         res = '(';
 
-    //console.log(item)
+    console.log(item)
 
     if (Array.isArray(item)) {
         if (isExpr(item)) {
-            // let spr = store.sprs.find(spr => spr.fk_display_fld === item[0]);
-            // if (spr)
-            //     item[0] = spr.fk_fld;
+            let spr = store.tables.find(spr => spr.fk_display_fld === item[0]);
+
+            if (spr) {
+                const row = spr.data.find(data => data.text === item[2]);
+                if (row) {
+                    item[0] = spr.fk_fld;
+                    item[2] = row.value;
+                    //console.log(row);
+                }
+            }
 
             let op = '';
             let val = '';
@@ -163,9 +170,9 @@ app.get('/api/getData', async (req, res) => {
     if (requireTotalCount) {
         let cash = totalCash.find(item => item.filter === filter);
         if (!cash) {
-            let arr = await store.query(`select Count(*) as totalCount from ${TAB} where ${filter}`);
+            let arr = await store.query(`select Count(*) as totalCount from RZD.Data_A where ${filter}`);
             store.totalCount = arr[0].totalCount;
-            totalCash.push({filter: filter, totalCount: arr[0].totalCount});
+            totalCash.push({ filter: filter, totalCount: arr[0].totalCount });
         }
         else
             store.totalCount = cash.totalCount;
@@ -174,37 +181,40 @@ app.get('/api/getData', async (req, res) => {
 
     if (group) {
         JSON.parse(group).forEach(async (item) => {
+            const spr = store.tables.find(spr => spr.fk_display_fld === item.selector);
+            const fk_fld = spr.fk_fld;
             const groupName = item.selector;
 
-            let cash = groupCash.find((item, idx) => item.filter === filter && item.group === groupName);
+            let cash = groupCash.find(el => el.filter === filter && el.group === groupName);
 
             if (cash) {
                 groupCount = cash.groupCount;
             }
             else {
-                let arr = await store.query(`select Count(distinct ${groupName}) as cnt from ${TAB} where ${filter}`);
+                let arr = await store.query(`select Count(distinct ${fk_fld}) as cnt from RZD.Data_A where ${filter}`);
                 groupCount = arr[0].cnt;
             }
 
-            cash = groupCash.find((item, idx) => item.filter === filter && item.group === groupName);
+            //cash = groupCash.find(el => el.filter === filter && el.group === groupName);
 
             let data = [];
 
             if (cash) {
                 //arr = [{ items: null, count: cash.count, summa: cash.summa, data: cash.data }];
                 data = [...cash.data];
-                console.log('cash', { filter: cash.filter, group: cash.group, groupCount: cash.groupCount });
+                console.log('cash:', { filter: cash.filter, group: cash.group, groupCount: cash.groupCount });
             }
             else {
                 const sql = `
-                select ${groupName} as "key", 
-                    NULL as items, 
-                    Count(*) as "count", 
-                    Sum(CARGO_TONNAGE) as "summa"
-                from ${TAB}
+                select ${spr.pk_display_fld} as "key", 
+                    NULL as items,
+                    Count(*) as "count",
+                Sum(CARGO_TONNAGE) as "summa"
+                from RZD.[Data_A] a
+                join ${spr.tab_name} b on b.${spr.pk_fld} = a.${spr.fk_fld}
                 where ${filter}
-                group by ${groupName}
-                order by ${groupName} ${item.desc ? 'desc' : ''}`;
+                group by b.${spr.pk_display_fld}
+                order by b.${spr.pk_display_fld}`;
 
                 arr = await store.query(sql);
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import 'devextreme/dist/css/dx.common.css';
-import 'devextreme/dist/css/dx.light.css';
+import 'devextreme/dist/css/dx.carmine.compact.css';
 import CustomStore from 'devextreme/data/custom_store';
 import Drawer from 'devextreme-react/drawer';
 import { Toolbar, Item } from 'devextreme-react/toolbar';
@@ -15,6 +15,7 @@ import ruMessages from "devextreme/localization/messages/ru.json";
 import { locale, loadMessages } from "devextreme/localization";
 
 import store from './store';
+import Filter from './filter.js';
 import { Col } from 'devextreme-react/responsive-box';
 
 const isNotEmpty = (value) => value !== undefined && value !== null && value !== '';
@@ -175,15 +176,16 @@ class App extends React.Component {
                 <Drawer
                     opened={this.state.filterOpened}
                     component={Filter}
-                    openedStateMode='shrink'
+                    openedStateMode='overlap'
                     closeOnOutsideClick={true}
                     position='left'
                     revealMode='slide'
+                    width="800px"
                     height="100%" >
 
                     <DataGrid
                         ref={this.grid}
-                        dataSource={dataSource}
+                        // dataSource={dataSource}
                         height="96vh"
                         //width="100%"
                         showBorders={true}
@@ -199,7 +201,7 @@ class App extends React.Component {
                         columnWidth={300}
                         filterValue={this.state.filterValue}
                         onRowExpanding={this.rowExpanding}
-                        columns={this.state.columns}
+                        // columns={this.state.columns}
                     >
                         <RemoteOperations groupPaging={true} />
                         <Scrolling mode="virtual" />
@@ -282,10 +284,5 @@ const getData = async (params) => {
     return js;
 }
 
-class Filter extends React.Component {
-    render() {
-        return <div className='filter_content' style={{ width: "800px", height: "100%", background: "aliceblue" }}>FILTER</div>
-    }
-}
 
 export default observer(App);

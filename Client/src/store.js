@@ -2,11 +2,17 @@
 import { action, observable, makeObservable, computed } from 'mobx';
 
 class Store {
-    // constructor() {
-    //     makeObservable(this);        
-    // }
+    constructor() {
+        makeObservable(this, {
+            tables: observable,
+            gridStruct: observable,
+            setTables: action,
+            setGridStruct: action,
 
-    tables = observable([]);
+    });
+  };
+
+    tables = [];
     gridStruct = [];
 
     getTables = async () => {
