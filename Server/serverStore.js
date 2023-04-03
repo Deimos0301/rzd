@@ -5,7 +5,7 @@ class Store {
     pool;
     request;
     totalCount = 0;
-    sprs = [];
+    tables = [];
     gridStruct = [];
 
     constructor(pool) {
@@ -15,9 +15,9 @@ class Store {
     query = async (sql) => {
         if (!this.request)
             this.request = this.pool.request();
-        
+
         console.log(sql + '\n');
-        
+
         const arr = await this.request.query(sql);
         return arr.recordset;
     }
@@ -27,7 +27,7 @@ class Store {
         return rs.recordset;
     };
 
-    getSpr = async () => {
+    getTables = async () => {
         if (!this.request)
             this.request = this.pool.request();
 
@@ -36,28 +36,53 @@ class Store {
         //console.log(gridStruct);
 
         let promises = [];
+        let sqls = [];
 
         arr.forEach(el => {
             //const sql = `select ${el.PK_FLD} as value, ${el.PK_DISPLAY_FLD} as "text" from ${el.TAB_NAME} order by ${el.PK_DISPLAY_FLD}`;
-            const sql = `select ${el.PK_DISPLAY_FLD} as value, ${el.PK_DISPLAY_FLD} as "text" from ${el.TAB_NAME} order by ${el.PK_DISPLAY_FLD}`;
-            promises.push(this.request.query(sql));
+            if (el.PK_FLD && el.TAB_NAME != 'RZD.Data') {
+                let where = '(1=1)'
+                if (el.FK_FLD === 'PROD_KIND_ID')
+                    where = 'PROD_KIND_ID <> 0';
+                const sql = `select ${el.PK_FLD} as value, ${el.PK_DISPLAY_FLD} as "text" from ${el.TAB_NAME} where ${where} order by ${el.PK_DISPLAY_FLD}`;
+          
+                if (!sqls.find(item => item.sql === sql))
+                    sqls.push({ SQL: sql, data: [] });
+                el.SQL = sql;
+                //promises.push(this.request.query(sql));
+            }
+        });
+
+        sqls.forEach(item => {
+            promises.push(this.request.query(item.SQL));
         });
 
         let values = await Promise.all(promises);
 
-        values.map((res, idx) => {
-            this.sprs.push({
-                tab_name: arr[idx].TAB_NAME,
-                pk_fld: arr[idx].PK_FLD,
-                fk_fld: arr[idx].FK_FLD,
-                pk_display_fld: arr[idx].PK_DISPLAY_FLD,
-                fk_display_fld: arr[idx].FK_DISPLAY_FLD,
-                fld_caption: arr[idx].FLD_CAPTION,
-                data: res.recordset
-            });
+        values.forEach((el, idx) => {
+            sqls[idx].data = el.recordset;
         });
 
-        //console.log(this.sprs)
+        arr.forEach(el => {
+            if (el.SQL) {
+                const sql = sqls.find(item => item.SQL === el.SQL);
+                el.data = sql.data;
+            }
+
+            const tab = {
+                tab_name: el.TAB_NAME,
+                pk_fld: el.PK_FLD,
+                fk_fld: el.FK_FLD,
+                pk_display_fld: el.PK_DISPLAY_FLD,
+                fk_display_fld: el.FK_DISPLAY_FLD,
+                fld_caption: el.FLD_CAPTION,
+                dataType: el.DataType,
+                //sql: el.sql,
+                data: el.data
+            };
+
+            this.tables.push(tab);
+        });
     }
 
     doJoin = async () => {
@@ -72,11 +97,11 @@ class Store {
         )
         select top 200 * from QRY
         where RN > 1000 and ((STATION_ID_IN = 1526) and (REGION_ID_IN = 41))`;
-   
+
         let data = await this.query(sql);
 
-        this.sprs.map(spr => {
-            let newSpr = spr.data.map(el => {return {[spr['fk_fld']]: el.value, [spr['fk_display_fld']]: el.text}});
+        this.tables.map(spr => {
+            let newSpr = spr.data.map(el => { return { [spr['fk_fld']]: el.value, [spr['fk_display_fld']]: el.text } });
             console.log(spr['fk_fld'])
             data = new JSG(data).innerJoin(newSpr, spr['fk_fld']).result();
         });

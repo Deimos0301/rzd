@@ -9,7 +9,7 @@ import DataGrid, {
     Column, SearchPanel, HeaderFilter, GroupItem, Summary, TotalItem,
     FilterPanel, FilterBuilderPopup, FilterRow
 } from 'devextreme-react/data-grid';
-import JSG from 'jsgjs';
+// import JSG from 'jsgjs';
 import { observer } from 'mobx-react';
 import ruMessages from "devextreme/localization/messages/ru.json";
 import { locale, loadMessages } from "devextreme/localization";

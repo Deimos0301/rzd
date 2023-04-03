@@ -17,7 +17,7 @@ class Store {
 
         this.setTables(js);
     }
-
+    
     getGridStruct = async () => {
         const arr = await fetch('/api/getGridStruct');
         const js = await arr.json();
