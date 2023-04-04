@@ -71,7 +71,7 @@ const filterToSQL = (item, res) => {
         if (isExpr(item)) {
             let spr = store.tables.find(spr => spr.fk_display_fld === item[0]);
 
-            if (spr) {
+            if (spr && spr.data) {
                 const row = spr.data.find(data => data.text === item[2]);
                 if (row) {
                     item[0] = spr.fk_fld;

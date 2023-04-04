@@ -7,7 +7,7 @@ import DropDownBox from 'devextreme-react/drop-down-box';
 import List from 'devextreme-react/list';
 import { CheckBox } from 'devextreme-react/check-box';
 import DateBox from 'devextreme-react/date-box';
-import Box, { Item as BoxItem } from 'devextreme-react/box';
+import { NumberBox } from 'devextreme-react/number-box';
 import { Button } from 'devextreme-react/button';
 import './filterItem.css'
 
@@ -43,7 +43,7 @@ class operComp extends Component {
 class valueComp extends Component {
     render() {
         return (
-            <div style={{ color: "WindowText", fontWeight: "600", fontSize: "13px" }}>{this.props.data.text}</div>
+            <div style={{ color: "navy", fontWeight: "600", fontSize: "13px" }}>{this.props.data.text}</div>
         );
     }
 }
@@ -55,10 +55,11 @@ class FilterItem extends Component {
     constructor(props) {
         super(props);
 
+        this.cbOper = React.createRef();
+
         this.state = {
             operSource: operSource,
             disabled: false,
-            //            atrib: atrib,
             oper: this.props.oper,
             values: this.props.values,
             isListOpened: false,
@@ -71,7 +72,7 @@ class FilterItem extends Component {
 
         if (this.props.fk_fld) {
             const atrib = store.tables.find(item => item.fk_fld === this.props.fk_fld);
-            console.log(atrib)
+            // console.log(toJS(atrib))
             if (atrib)
                 this.onAtribChanged({ value: atrib.fk_fld });
             this.props.updateFilterHeight();
@@ -109,32 +110,66 @@ class FilterItem extends Component {
 
         if (!tab) return;
 
+        let val1 = null;
+        let val2 = null;
+
+        if (Array.isArray(this.state.values)) {
+            if (this.state.values.length > 0)
+                val1 = this.state.values[0];
+            if (this.state.values.length > 1)
+                val2 = this.state.values[1];
+        }
+
         switch (tab.dataType) {
-            case "number":
-                break;
             case 'date':
+            case "number":
                 if (['BETWEEN', 'NOT BETWEEN'].includes(item.oper)) {
                     return (
                         <div style={{ display: "flex", flexDirection: "row", width: "100%" }}>
-                            <div style={{ lineHeight: "27px", maxWidth: "27px", minWidth: "27px", textAlign: "center", fontWeight: "bold", color: "navy" }}> С: </div>
+                            <div style={{ lineHeight: "27px", maxWidth: "27px", minWidth: "27px", textAlign: "center", fontWeight: "bold" }}> С: </div>
+                            
                             <div style={{ flexGrow: "1" }}>
-                                <DateBox defaultValue={this.now} onValueChanged={this.value1Changed} disabled={this.state.disabled} />
+                                {
+                                    tab.dataType === 'number'
+                                        ?
+                                        <NumberBox value={val1 || 0} showSpinButtons={true} disabled={this.state.disabled} onValueChanged={this.number1Changed} inputAttr={{ class: 'valueComp' }} />
+                                        :
+                                        <DateBox value={val1} onValueChanged={this.value1Changed} disabled={this.state.disabled} inputAttr={{ class: 'valueComp' }} />
+                                }
                             </div>
-                            <div style={{ lineHeight: "27px", maxWidth: "27px", minWidth: "27px", textAlign: "center", fontWeight: "bold", color: "navy" }}> ПО: </div>
+                            
+                            <div style={{ lineHeight: "27px", maxWidth: "27px", minWidth: "27px", textAlign: "center", fontWeight: "bold" }}> ПО: </div>
+                            
                             <div style={{ flexGrow: "1" }}>
-                                <DateBox defaultValue={this.now} onValueChanged={this.value2Changed} disabled={this.state.disabled} />
+                                {
+                                    tab.dataType === 'number'
+                                        ?
+                                        <NumberBox value={val2 || 0} showSpinButtons={true} disabled={this.state.disabled} onValueChanged={this.number2Changed} inputAttr={{ class: 'valueComp' }} />
+                                        :
+                                        <DateBox value={val2} onValueChanged={this.value2Changed} disabled={this.state.disabled} inputAttr={{ class: 'valueComp' }}/>
+                                }
                             </div>
                         </div>
                     );
                 }
                 else {
+                    // const val = Array.isArray(this.state.values)
+                    //     && this.state.values.length > 0
+                    //     && this.state.values[0] ? this.state.values : [null];
+
+                    // console.log(val)
+
                     return (
-                        <DateBox
-                            defaultValue={this.now}
-                            disabled={this.state.disabled}
-                            value={this.state.values}
-                            onValueChanged={this.dateChanged}
-                        />
+                        tab.dataType === 'number'
+                            ?
+                            <NumberBox value={val1 || 0} showSpinButtons={true} disabled={this.state.disabled} inputAttr={{ class: 'valueComp' }} onValueChanged={this.numberChanged} />
+                            :
+                            <DateBox
+                                disabled={this.state.disabled}
+                                value={val1 instanceof Date && !isNaN(date) ? val1 : null}
+                                inputAttr={{ class: 'valueComp' }}
+                                onValueChanged={this.dateChanged}
+                            />
                     );
                 }
             default:
@@ -153,6 +188,8 @@ class FilterItem extends Component {
                             showClearButton={true}
                             disabled={this.state.disabled}
                             contentRender={this.listRender}
+                            itemComponent={valueComp}
+                            inputAttr={{ class: 'valueComp' }}
                             onOptionChanged={this.dropDownOptionChanged}
                             onValueChanged={this.dropDownValueChanged}
                         // itemComponent={valueComp}
@@ -165,6 +202,7 @@ class FilterItem extends Component {
 
     dropDownOptionChanged = (el) => {
         if (el.name === 'value' && !el.value) {
+            // console.log('dropDownOptionChanged', el.value)
             runInAction(() => {
                 const item = store.filterItems.find(el => el.uid === this.props.uid);
                 item.values = null;
@@ -182,7 +220,7 @@ class FilterItem extends Component {
         this.setState({ values: e.value });
         runInAction(() => {
             const item = store.filterItems.find(el => el.uid === this.props.uid);
-            item.values = e.value;
+            item.values = [e.value];
             //console.log(toJS(item))
         });
     }
@@ -194,7 +232,6 @@ class FilterItem extends Component {
         });
 
         //console.log(toJS(store.filterItems));
-        console.log('listItemClick', e.value)
 
         this.setState({
             values: e.itemData.value,
@@ -204,25 +241,33 @@ class FilterItem extends Component {
 
     listItemRender = (item) => {
         return (
-            <div style={{ fontSize: "13px", fontWeight: "600" }}>{item.text}</div>
+            <div style={{ fontSize: "13px", fontWeight: "600", color: "navy", fontFamily: "helvetica" }}>{item.text}</div>
         );
     }
 
     dateChanged = (el) => {
         runInAction(() => {
             let item = store.filterItems.find(el => el.uid === this.props.uid);
-            item.values = formatDate(el.value);
-            console.log('dateChanged:', formatDate(el.value));
+            item.values = [formatDate(el.value)];
+            //console.log('dateChanged:', formatDate(el.value));
+        });
+    }
+
+    numberChanged = (el) => {
+        runInAction(() => {
+            let item = store.filterItems.find(el => el.uid === this.props.uid);
+            item.values = [el.value];
+            //console.log('dateChanged:', formatDate(el.value));
         });
     }
 
     value1Changed = (el) => {
-        console.log('value1Changed', el.value)
+        //console.log('value1Changed', el.value)
         runInAction(() => {
             let item = store.filterItems.find(el => el.uid === this.props.uid);
             if (!Array.isArray(item.values)) item.values = [null, null];
             item.values[0] = formatDate(el.value);
-            console.log('value1Changed:', formatDate(el.value));
+            //console.log('value1Changed:', formatDate(el.value));
         });
     }
 
@@ -231,7 +276,23 @@ class FilterItem extends Component {
             let item = store.filterItems.find(el => el.uid === this.props.uid);
             if (!Array.isArray(item.values)) item.values = [null, null];
             item.values[1] = formatDate(el.value);
-            console.log('value2Changed:', formatDate(el.value));
+            // console.log('value2Changed:', formatDate(el.value));
+        });
+    }
+
+    number1Changed = (el) => {
+        runInAction(() => {
+            let item = store.filterItems.find(el => el.uid === this.props.uid);
+            if (!Array.isArray(item.values)) item.values = [null, null];
+            item.values[0] = el.value;
+        });
+    }
+
+    number2Changed = (el) => {
+        runInAction(() => {
+            let item = store.filterItems.find(el => el.uid === this.props.uid);
+            if (!Array.isArray(item.values)) item.values = [null, null];
+            item.values[1] = el.value;
         });
     }
 
@@ -254,10 +315,12 @@ class FilterItem extends Component {
 
         let arr = [...operSource];
 
+        if (!atrib) return;
+
         switch (atrib.dataType) {
             case 'fk':
                 arr = arr.filter(item => item.code !== 'BETWEEN' && item.code !== 'NOT BETWEEN' && item.code !== '>' && item.code !== '<' && item.code !== '>=' && item.code !== '<=');
-                console.log(arr)
+                //console.log(arr)
                 break;
             case 'date':
                 arr = arr.filter(item => item.code !== 'IN' && item.code !== 'NOT IN');
@@ -266,7 +329,19 @@ class FilterItem extends Component {
                 arr = arr.filter(item => item.code !== 'IN' && item.code !== 'NOT IN');
                 break;
         }
-        this.setState({ operSource: arr });
+        //console.log(this.state.oper)
+
+        this.setState({ operSource: arr }, () => {
+            if (!arr.find(el => el.code === this.state.oper)) {
+                this.setState({ oper: '=' });
+            }
+
+            if (el.element) {
+                this.setState({ values: null });
+                let item = store.filterItems.find(el => el.uid === this.props.uid);
+                item.values = null;
+            }
+        });
 
         runInAction(() => {
             let item = store.filterItems.find(el => el.uid === this.props.uid);
@@ -279,19 +354,32 @@ class FilterItem extends Component {
         this.setState({ oper: el.value });
 
         runInAction(() => {
-            let item = store.filterItems.find(el => el.uid === this.props.uid);
+            let item = store.getFilterItem(this.props.uid);
             item.oper = el.value;
         });
 
         this.makeValues();
+
+        if (el.element) {
+            this.setState({ values: null });
+            runInAction(() => {
+                let item = store.getFilterItem(this.props.uid);
+                item.values = null;
+            });
+        }
     }
 
     onCheckChanged = (el) => {
         this.setState({ disabled: !el.value });
-    }
+        runInAction(() => {
+            let item = store.getFilterItem(this.props.uid); //store.filterItems.find(el => el.uid === this.props.uid);
+            item.disabled = !el.value;
+        });
+}
 
     addClick = (el) => {
-        this.props.addFilterItem(this.uid);
+        // console.log(this.state.values)
+        this.props.addFilterItem(this.props.uid);
     }
 
     removeClick = (el) => {
@@ -305,7 +393,7 @@ class FilterItem extends Component {
                     <CheckBox value={true} iconSize={27} disabled={this.props.disabled} onValueChanged={this.onCheckChanged} />
                 </div>
 
-                <div>
+                <div style={{marginLeft: "2px"}}>
                     <SelectBox
                         dataSource={store.tables}
                         displayExpr="fld_caption"
@@ -324,10 +412,11 @@ class FilterItem extends Component {
                 <div style={{ marginLeft: "2px", marginRight: "2px" }}>
                     <SelectBox
                         dataSource={this.state.operSource}
+                        ref={this.cbOper}
                         displayExpr="text"
                         valueExpr="code"
                         defaultValue="IN"
-                        value={this.props.oper || '='}
+                        value={this.state.oper || '='}
                         placeholder="Выберите условие"
                         inputAttr={{ id: 'operComp' }}
                         itemComponent={operComp}
@@ -348,6 +437,8 @@ class FilterItem extends Component {
 }
 
 const formatDate = (date) => {
+    if (!date) return "";
+
     var dd = date.getDate();
     if (dd < 10) dd = '0' + dd;
 

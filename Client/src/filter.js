@@ -12,104 +12,89 @@ class Filter extends Component {
         super(props);
 
         this.state = {
-            filterElements: [
-                <FilterItem 
-                    uid='00000'
-                    fk_fld="PROD_KIND_ID"
-                    oper="=" values={1}
-                    disabled={true}
-                    addFilterItem={this.addFilterItem}
-                    updateFilterHeight={this.updateFilterHeight} 
-                />,
-                <FilterItem 
-                    uid="11111"
-                    fk_fld="REGION_ID_IN"
-                    oper="IN" values={[58, 26]}
-                    disabled={false} 
-                    addFilterItem={this.addFilterItem}
-                    updateFilterHeight={this.updateFilterHeight} 
-                />]
-        }
-
-        const items = [...store.filterItems];
-        
-        if (!items.find(el => el.uid === '00000')) {
-            items.push({ uid: '00000', fk_fld: "PROD_KIND_ID", oper: "=", values: 1, disabled: true });
-            store.setFilterItems(items);
-        }
-        if (!items.find(el => el.uid === '11111')) {
-            items.push({ uid: '11111', fk_fld: "REGION_ID_IN", oper: "IN", values: [58, 26], disabled: true });
-            store.setFilterItems(items);
+            filterElements: []
         }
     }
 
-    componentDidMount = () => {
+    itemsToElements = () => {
+        const arr = store.filterItems.map(item => 
+            <FilterItem 
+                uid={item.uid}
+                key={item.uid}
+                fk_fld={item.fk_fld}
+                oper={item.oper} 
+                values={item.values}
+                disabled={item.disabled}
+                addFilterItem={this.addFilterItem}
+                deleteFilterItem={this.deleteFilterItem} 
+                updateFilterHeight={this.updateFilterHeight} 
+            />
+        );
+        //console.log(arr);
+        return arr;
+    }
+
+    loadFilter = () => {
+       
+        if (!store.getFilterItem('00000')) {
+            store.filterItems.push({ uid: '00000', fk_fld: "PROD_KIND_ID", oper: "=", values: 1, disabled: true });
+        }
+        if (!store.getFilterItem('11111')) {
+            store.filterItems.push({ uid: '11111', fk_fld: "REGION_ID_IN", oper: "IN", values: [58, 26], disabled: false });
+        }
+        if (!store.getFilterItem('22222')) {
+            store.filterItems.push({ uid: '22222', fk_fld: "CARGO_TONNAGE", oper: "BETWEEN", values: [10, 20], disabled: false });
+        }
+
+        this.setState({filterElements: this.itemsToElements()});
     }
 
     deleteFilterItem = (uid) => {
-        let arr = [...store.filterItems];
-        //arr.forEach(item => console.log('ДО', toJS(item)))
-        arr = arr.filter(item => item.uid !== uid);
+        let idx = -1;
 
-
-        let newArr = [];
-
-        arr.forEach(item => {
-            newArr.push(
-                <FilterItem 
-                    uid={item.uid} 
-                    fk_fld={item.fk_fld} 
-                    oper={item.oper} 
-                    values={item.values} 
-                    disabled={item.disabled} 
-                    addFilterItem={this.addFilterItem} 
-                    deleteFilterItem={this.deleteFilterItem} 
-                    updateFilterHeight={this.updateFilterHeight}
-                />);
+        store.filterItems.forEach((item, index) => {
+            if (item.uid === uid) {
+                idx = index;
+                return;
+            }
         });
 
-        //arr.forEach(item => console.log('ПОСЛЕ', toJS(item)))
+        store.filterItems.splice(idx, 1);
 
-        this.setState({ filterElements: newArr });
+        this.setState({ filterElements: this.itemsToElements() });
 
-        console.log(newArr.length);
-        this.props.updateFilterHeight(newArr.length);
-        store.setFilterItems(arr);
+        this.props.updateFilterHeight();
     }
 
     updateFilterHeight = () => {
-        const cnt = this.state.filterElements.length;
-        this.props.updateFilterHeight(cnt);
+        this.props.updateFilterHeight();
     }
 
     addFilterItem = (srcUid) => {
-        let arr = [...this.state.filterElements];
-        console.log(srcUid)
-        const uid = uuidv4();
+        
+        //let arr = [...store.filterItems];
+        store.filterItems.push({ uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
+        
+        // let idx = -1;
+        // store.filterItems.forEach((item, index) => {
+        //     if (item.uid === srcUid) {
+        //         idx = index + 1;
+        //         return;
+        //     }
+        // });
 
-        arr.push(
-            <FilterItem 
-                uid={uid}
-                fk_fld="" 
-                oper="=" 
-                disabled={false}
-                addFilterItem={this.addFilterItem}
-                deleteFilterItem={this.deleteFilterItem}
-                updateFilterHeight={this.updateFilterHeight}
-            />);
+        // store.filterItems.splice(idx, 0, { uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
 
-        this.setState({ filterElements: arr }, () => {
-            this.updateFilterHeight();
-        });
+        //store.setFilterItems(arr);
 
-        arr = [...store.filterItems];
-        arr.push({ uid: uid, fk_fld: "", oper: "=", values: [], disabled: false });
-        store.setFilterItems(arr);
-        //console.log(toJS(store.filterItems));
+        this.setState({filterElements: this.itemsToElements()});
+        this.updateFilterHeight();
+        // console.log(toJS(store.filterItems))
     }
 
     saveClick = () => {
-        console.log(toJS(this.state.filterElements));
+        // this.loadFilter();
+        console.log(this.state.filterElements);
         console.log(toJS(store.filterItems));
     }
 

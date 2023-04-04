@@ -22,6 +22,7 @@ import { ReactComponent as LogoSVG } from './img/rzd.svg';
 
 import store from './store';
 import Filter from './filter.js';
+import { toJS } from 'mobx';
 
 const isNotEmpty = (value) => value !== undefined && value !== null && value !== '';
 
@@ -68,10 +69,14 @@ const gridSource = new CustomStore({
     }
 });
 
+
 class App extends React.Component {
     
     constructor(props) {
         super(props);
+
+        this.grid = React.createRef();
+        this.filter = React.createRef();
 
         this.state = {
             filterHeight: "118px",
@@ -81,27 +86,23 @@ class App extends React.Component {
             // loadPanelVisible: false
         }
 
-        this.grid = React.createRef();
         //this.filter = React.createRef();
 
         loadMessages(ruMessages);
         locale(navigator.language);
     }
 
-    componentDidMount = async () => {        
-        // this.setState({loadPanelVisible: true});
-        await store.getTables();
-        await store.getGridStruct();
-        
+    componentDidMount = async() => {            
+        await store.getMetaData();    
+
         const grid = this.grid.current.instance;
 
-        grid.beginUpdate();
-        // console.log(this.grid)
+        this.filter.current.loadFilter();
 
-        const arr = await fetch('/api/query?sql=select Max(DATE_IN) as MaxDate from RZD.Data');
-        const MaxDate = new Date((await arr.json())[0].MaxDate);
-        let MinDate = new Date(MaxDate);
-        MinDate.setMonth(MaxDate.getMonth() - 2);
+        grid.beginUpdate();
+
+        let MinDate = new Date(store.maxDate);
+        MinDate.setMonth(store.maxDate.getMonth() - 2);
 
 
         let cols = [];
@@ -131,7 +132,7 @@ class App extends React.Component {
             // "and",
             // [ 'PROD_KIND_NAME', 'anyof', ['Нефть и нефтепродукты']],
             "and",
-            ['DATE_IN', 'between', [MinDate, MaxDate]]
+            ['DATE_IN', 'between', [MinDate, store.maxDate]]
         ];
 
         this.setState({ columns: cols }, () => {
@@ -171,8 +172,8 @@ class App extends React.Component {
         store.setFilterOpened(false);
     }
 
-    updateFilterHeight = (count) => {
-        const h = (86 + count * 32).toString() + 'px';
+    updateFilterHeight = () => {
+        const h = (86 + store.filterItems.length * 32).toString() + 'px';
         
         this.setState({filterHeight: h});
     }
@@ -200,14 +201,18 @@ class App extends React.Component {
                         <Box direction='col' width="100%" height="100%">
                             <BoxItem ratio={0} baseSize="auto" visible={store.filterOpened}>
                                 <Container title="Условия фильтра" height={this.state.filterHeight} closeButton={true} onCloseClick={this.closeFilter}>
-                                    <Filter updateFilterHeight={this.updateFilterHeight} />
+                                    <Filter 
+                                        ref={this.filter}
+                                        updateFilterHeight={this.updateFilterHeight} 
+                                    />
                                 </Container>
                             </BoxItem>
                             <BoxItem ratio={2}>
                                 <Container title="Результаты запроса">
                                     <DataGrid
                                         ref={this.grid}
-                                        dataSource={gridSource}
+                                        // dataSource={gridSource}
+                                        // columns={this.state.columns}
                                         height="96%"
                                         //width="100%"
                                         showBorders={true}
@@ -222,7 +227,6 @@ class App extends React.Component {
                                         columnWidth={300}
                                         filterValue={this.state.filterValue}
                                         onRowExpanding={this.rowExpanding}
-                                        columns={this.state.columns}
                                         // onContentReady={this.contentReady}
                                     >
                                         <RemoteOperations groupPaging={true} />

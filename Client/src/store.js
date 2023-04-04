@@ -1,5 +1,5 @@
 //import React, {Component} from "react";
-import { action, observable, makeObservable } from 'mobx';
+import { action, observable, makeObservable, computed } from 'mobx';
 
 class Store {
     tables = [];
@@ -9,12 +9,13 @@ class Store {
     linesCount = 1;
     filterOpened = false;
     fieldsOpened = false;
+    maxDate;
 
     constructor() {
         makeObservable(this, {
             tables: observable,
             filterElements: observable,
-            filterItems: observable,
+            //filterItems: observable,
             gridStruct: observable,
             linesCount: observable,
             filterOpened: observable,
@@ -39,12 +40,31 @@ class Store {
         this.setTables(js);
     }
 
+    getFilterItem = uid => {
+        return this.filterItems.find(el => el.uid === uid);
+    }
+
     getGridStruct = async () => {
         const arr = await fetch('/api/getGridStruct');
         const js = await arr.json();
 
         this.setGridStruct(js);
     }
+
+    getMaxDate = async () => {
+        const arr = await fetch('/api/query?sql=select Max(DATE_IN) as MaxDate from RZD.Data');
+        const a = await arr.json();
+        this.maxDate = new Date(a[0].MaxDate);
+    }
+
+    getMetaData = async () => {
+        await Promise.all([
+                store.getTables(),
+                store.getGridStruct(),
+                store.getMaxDate()
+           ]
+        );
+    };
 
     setTables = (data) => { this.tables = [...data]; }
 
@@ -62,4 +82,5 @@ class Store {
 }
 
 const store = new Store();
+
 export default store;
