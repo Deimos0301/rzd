@@ -45,6 +45,8 @@ class Store {
     }
 
     getGridStruct = async () => {
+        if (this.tables.length > 0) return;
+
         const arr = await fetch('/api/getGridStruct');
         const js = await arr.json();
 

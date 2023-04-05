@@ -35,11 +35,26 @@ const GroupCell = (el, data) => {
     el.append(data.value + ` (Строк: ${data.data.count}, Вес: ${formatter.format(data.data.summa)} т)`);
 };
 
+const getData = async (params) => {
+    await store.getTables();
+
+    const data = await fetch(`/api/getData`, {
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ params: params })
+    });
+
+    return await data.json();
+}
+
 const gridSource = new CustomStore({
     load: async (loadOptions) => {
-        let params = '?';
 
-        [
+        let params = {};
+
+        const opts = [
             'filter',
             'group',
             'groupSummary',
@@ -55,23 +70,36 @@ const gridSource = new CustomStore({
             'take',
             'totalSummary',
             'userData'
-        ].forEach(i => {
-            if (i in loadOptions && isNotEmpty(loadOptions[i])) {
-                params += `${i}=${JSON.stringify(loadOptions[i])}&`;
+        ];
+
+        opts.forEach(opt => {
+            if (opt in loadOptions && isNotEmpty(loadOptions[opt])) {
+                params = { ...params, [opt]: JSON.stringify(loadOptions[opt]) }
             }
+
+            let where = [];
+
+            store.filterItems.forEach(item => {
+                if (item.required || !item.disabled) {
+                    where.push({
+                        fk_fld: item.fk_fld,
+                        oper: item.oper,
+                        values: item.values,
+                        dataType: item.dataType
+                    });
+                }
+            });
+            params = { ...params, where: JSON.stringify(where) };
         });
 
-        params = params.slice(0, -1);
-
         const data = await getData(params);
-        // this.setState({loadPanelVisible: false});
         return data;
     }
 });
 
 
 class App extends React.Component {
-    
+
     constructor(props) {
         super(props);
 
@@ -92,8 +120,8 @@ class App extends React.Component {
         locale(navigator.language);
     }
 
-    componentDidMount = async() => {            
-        await store.getMetaData();    
+    componentDidMount = async () => {
+        await store.getMetaData();
 
         const grid = this.grid.current.instance;
 
@@ -174,8 +202,12 @@ class App extends React.Component {
 
     updateFilterHeight = () => {
         const h = (86 + store.filterItems.length * 32).toString() + 'px';
-        
-        this.setState({filterHeight: h});
+
+        this.setState({ filterHeight: h });
+    }
+
+    refreshData = () => {
+        this.grid.current.instance.refresh();
     }
 
     render() {
@@ -183,11 +215,11 @@ class App extends React.Component {
             <>
                 {/* <LoadPanel visible={this.state.loadPanelVisible} /> */}
 
-                <div className="logo" style={{height: "32px", width: "100%", display: "flex", alignItems: "center", marginTop: "4px"}}>
-                    <div style={{marginLeft: "8px"}}> <LogoSVG /> </div>
-                    <div style={{marginLeft: "20px"}}><Button icon='filter' type={store.filterOpened ? 'danger' : 'normal'} text='Условия' onClick={() => { store.setFilterOpened(!store.filterOpened)}} /> </div>
-                    <div style={{marginLeft: "5px"}}><Button icon='fields' type={store.fieldsOpened ? 'danger' : 'normal'} text='Столбцы'onClick={() => { store.setFieldsOpened(!store.fieldsOpened)}} /> </div>
-                    <div style={{marginLeft: "550px", fontSize: "20px", fontWeight: "bold", fontFamily: "Tahoma, sans-serif"}}> Поставки по ж/д </div>
+                <div className="logo" style={{ height: "32px", width: "100%", display: "flex", alignItems: "center", marginTop: "4px" }}>
+                    <div style={{ marginLeft: "8px" }}> <LogoSVG /> </div>
+                    <div style={{ marginLeft: "20px" }}><Button icon='filter' type={store.filterOpened ? 'danger' : 'normal'} text='Условия' onClick={() => { store.setFilterOpened(!store.filterOpened) }} /> </div>
+                    <div style={{ marginLeft: "5px" }}><Button icon='fields' type={store.fieldsOpened ? 'danger' : 'normal'} text='Столбцы' onClick={() => { store.setFieldsOpened(!store.fieldsOpened) }} /> </div>
+                    <div style={{ marginLeft: "550px", fontSize: "20px", fontWeight: "bold", fontFamily: "Tahoma, sans-serif" }}> Поставки по ж/д </div>
                 </div>
 
                 <div style={{ marginBottom: "4px" }} />
@@ -201,9 +233,10 @@ class App extends React.Component {
                         <Box direction='col' width="100%" height="100%">
                             <BoxItem ratio={0} baseSize="auto" visible={store.filterOpened}>
                                 <Container title="Условия фильтра" height={this.state.filterHeight} closeButton={true} onCloseClick={this.closeFilter}>
-                                    <Filter 
+                                    <Filter
                                         ref={this.filter}
-                                        updateFilterHeight={this.updateFilterHeight} 
+                                        refreshData={this.refreshData}
+                                        updateFilterHeight={this.updateFilterHeight}
                                     />
                                 </Container>
                             </BoxItem>
@@ -211,8 +244,8 @@ class App extends React.Component {
                                 <Container title="Результаты запроса">
                                     <DataGrid
                                         ref={this.grid}
-                                        // dataSource={gridSource}
-                                        // columns={this.state.columns}
+                                        dataSource={store.filterItems.length ? gridSource : undefined}
+                                        columns={this.state.columns}
                                         height="96%"
                                         //width="100%"
                                         showBorders={true}
@@ -227,14 +260,14 @@ class App extends React.Component {
                                         columnWidth={300}
                                         filterValue={this.state.filterValue}
                                         onRowExpanding={this.rowExpanding}
-                                        // onContentReady={this.contentReady}
+                                    // onContentReady={this.contentReady}
                                     >
                                         <RemoteOperations groupPaging={true} />
                                         <Scrolling mode="virtual" />
                                         <Grouping autoExpandAll={false} />
                                         <GroupPanel visible={true} />
                                         <SearchPanel visible={false} />
-                                        <HeaderFilter visible={true} height="700" width="600" allowSearch={true} />
+                                        <HeaderFilter visible={false} height="700" width="600" allowSearch={true} />
                                         <FilterPanel visible={false} />
                                         <FilterRow visible={false} />
                                         <FilterBuilderPopup />
@@ -275,13 +308,6 @@ class App extends React.Component {
             </>
         );
     }
-}
-
-const getData = async (params) => {
-    await store.getTables();
-
-    const data = await fetch(`/api/getData${params}`);
-    return await data.json();
 }
 
 export default observer(App);

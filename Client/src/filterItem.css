@@ -3,6 +3,11 @@
     font-size: 13px;
 }
 
+.dx-tag-content {
+    color: navy;
+    font-weight: 600;
+}
+
 #operComp {
     color: brown;
 }

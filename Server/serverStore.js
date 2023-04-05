@@ -52,7 +52,7 @@ class Store {
                 //promises.push(this.request.query(sql));
             }
         });
-console.log(arr.length)
+
         sqls.forEach(item => {
             promises.push(this.request.query(item.SQL));
         });

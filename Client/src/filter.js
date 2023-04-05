@@ -24,6 +24,7 @@ class Filter extends Component {
                 fk_fld={item.fk_fld}
                 oper={item.oper} 
                 values={item.values}
+                required={item.required}
                 disabled={item.disabled}
                 addFilterItem={this.addFilterItem}
                 deleteFilterItem={this.deleteFilterItem} 
@@ -37,16 +38,39 @@ class Filter extends Component {
     loadFilter = () => {
        
         if (!store.getFilterItem('00000')) {
-            store.filterItems.push({ uid: '00000', fk_fld: "PROD_KIND_ID", oper: "=", values: 1, disabled: true });
+            store.filterItems.push({ uid: '00000', fk_fld: "PROD_KIND_ID", oper: "=", values: [1], disabled: false, required: true });
         }
         if (!store.getFilterItem('11111')) {
-            store.filterItems.push({ uid: '11111', fk_fld: "REGION_ID_IN", oper: "IN", values: [58, 26], disabled: false });
+            store.filterItems.push({ uid: '11111', fk_fld: "REGION_ID_IN", oper: "IN", values: [58, 26], disabled: false, required: false });
         }
         if (!store.getFilterItem('22222')) {
-            store.filterItems.push({ uid: '22222', fk_fld: "CARGO_TONNAGE", oper: "BETWEEN", values: [10, 20], disabled: false });
+            store.filterItems.push({ uid: '22222', fk_fld: "CARGO_TONNAGE", oper: "BETWEEN", values: [10, 20], disabled: false, required: false });
         }
 
         this.setState({filterElements: this.itemsToElements()});
+    }
+
+    addFilterItem = (srcUid) => {
+        
+        let idx = -1;
+        store.filterItems.forEach((item, index) => {
+            if (item.uid === srcUid) {
+                idx = index + 1;
+                return;
+            }
+        });
+
+        store.filterItems.splice(idx, 0, { uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
+
+        //store.setFilterItems(arr);
+
+        this.setState({filterElements: this.itemsToElements()});
+        this.updateFilterHeight();
+        
+        // store.filterItems.push({ uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
+        
+        // this.setState({filterElements: this.itemsToElements()});
+        // this.updateFilterHeight();
     }
 
     deleteFilterItem = (uid) => {
@@ -70,28 +94,6 @@ class Filter extends Component {
         this.props.updateFilterHeight();
     }
 
-    addFilterItem = (srcUid) => {
-        
-        //let arr = [...store.filterItems];
-        store.filterItems.push({ uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
-        
-        // let idx = -1;
-        // store.filterItems.forEach((item, index) => {
-        //     if (item.uid === srcUid) {
-        //         idx = index + 1;
-        //         return;
-        //     }
-        // });
-
-        // store.filterItems.splice(idx, 0, { uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
-
-        //store.setFilterItems(arr);
-
-        this.setState({filterElements: this.itemsToElements()});
-        this.updateFilterHeight();
-        // console.log(toJS(store.filterItems))
-    }
-
     saveClick = () => {
         // this.loadFilter();
         console.log(this.state.filterElements);
@@ -111,7 +113,7 @@ class Filter extends Component {
                         <Item
                             location="before"
                             widget="dxButton"
-                            options={{ text: "Применить", type: "success", icon: "check", onClick: () => { console.log(this.state.filterElements) } }} >
+                            options={{ text: "Применить", type: "success", icon: "check", onClick: () => { this.props.refreshData() } }} >
                         </Item>
 
                         <Item
