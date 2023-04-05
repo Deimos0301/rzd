@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { observer } from "mobx-react";
-import store from "./store";
+import store, { formatDate } from "./store";
 import { toJS, runInAction } from 'mobx';
 import SelectBox from 'devextreme-react/select-box';
 import DropDownBox from 'devextreme-react/drop-down-box';
@@ -60,7 +60,8 @@ class FilterItem extends Component {
 
         this.state = {
             operSource: operSource,
-            disabled: false,
+            checked: this.props.checked,
+            fk_fld: this.props.fk_fld,
             oper: this.props.oper,
             values: this.props.values,
             isListOpened: false,
@@ -133,9 +134,9 @@ class FilterItem extends Component {
                                 {
                                     tab.dataType === 'number'
                                         ?
-                                        <NumberBox value={val1 || 0} showSpinButtons={true} disabled={this.state.disabled} onValueChanged={this.number1Changed} inputAttr={{ class: 'valueComp' }} />
+                                        <NumberBox value={val1 || 0} showSpinButtons={true} disabled={!this.state.checked} onValueChanged={this.number1Changed} inputAttr={{ class: 'valueComp' }} />
                                         :
-                                        <DateBox value={val1} onValueChanged={this.value1Changed} disabled={this.state.disabled} inputAttr={{ class: 'valueComp' }} />
+                                        <DateBox value={val1} onValueChanged={this.value1Changed} disabled={!this.state.checked} inputAttr={{ class: 'valueComp' }} />
                                 }
                             </div>
 
@@ -145,9 +146,9 @@ class FilterItem extends Component {
                                 {
                                     tab.dataType === 'number'
                                         ?
-                                        <NumberBox value={val2 || 0} showSpinButtons={true} disabled={this.state.disabled} onValueChanged={this.number2Changed} inputAttr={{ class: 'valueComp' }} />
+                                        <NumberBox value={val2 || 0} showSpinButtons={true} disabled={!this.state.checked} onValueChanged={this.number2Changed} inputAttr={{ class: 'valueComp' }} />
                                         :
-                                        <DateBox value={val2} onValueChanged={this.value2Changed} disabled={this.state.disabled} inputAttr={{ class: 'valueComp' }} />
+                                        <DateBox value={val2} onValueChanged={this.value2Changed} disabled={!this.state.checked} inputAttr={{ class: 'valueComp' }} />
                                 }
                             </div>
                         </div>
@@ -157,10 +158,10 @@ class FilterItem extends Component {
                     return (
                         tab.dataType === 'number'
                             ?
-                            <NumberBox value={val1 || 0} showSpinButtons={true} disabled={this.state.disabled} inputAttr={{ class: 'valueComp' }} onValueChanged={this.numberChanged} />
+                            <NumberBox value={val1 || 0} showSpinButtons={true} disabled={!this.state.checked} inputAttr={{ class: 'valueComp' }} onValueChanged={this.numberChanged} />
                             :
                             <DateBox
-                                disabled={this.state.disabled}
+                                disabled={!this.state.checked}
                                 value={val1 instanceof Date && !isNaN(date) ? val1 : null}
                                 inputAttr={{ class: 'valueComp' }}
                                 onValueChanged={this.dateChanged}
@@ -172,47 +173,47 @@ class FilterItem extends Component {
                     this.valueSource = tab.data;
                     this.selectionMode = ['=', '<>'].includes(item.oper) ? 'single' : 'multiple';
 
-                    if (this.selectionMode === 'multiple') {
-                        return (
-                            <TagBox
-                                dataSource={this.valueSource}
-                                displayExpr="text"
-                                valueExpr="value"
-                                showSelectionControls={true}
-                                showClearButton={true}
-                                showDropDownButton={true}
-                                searchEnabled={true}
-                                disabled={this.state.disabled}
-                                itemComponent={valueComp}
-                                inputAttr={{ class: 'valueComp' }}
-                                applyValueMode="useButtons"
-                                // hideSelectedItems={true}
-                                // multiline={true}
-                                maxDisplayedTags={4}
-                                value={this.state.values}
-                                onValueChanged={this.tagBoxValueChanged}
-                            >
-                            </TagBox>
-                        );
-                    }
-                    else
-                        return (
-                            <DropDownBox
-                                dataSource={this.valueSource}
-                                displayExpr="text"
-                                valueExpr="value"
-                                value={this.state.values}
-                                opened={this.state.isListOpened}
-                                deferRendering={false}
-                                showClearButton={true}
-                                disabled={this.state.disabled}
-                                contentRender={this.listRender}
-                                itemComponent={valueComp}
-                                inputAttr={{ class: 'valueComp' }}
-                                onOptionChanged={this.dropDownOptionChanged}
-                                onValueChanged={this.dropDownValueChanged}
-                            />
-                        );
+                    // if (this.selectionMode === 'multiple') {
+                    //     return (
+                    //         <TagBox
+                    //             dataSource={this.valueSource}
+                    //             displayExpr="text"
+                    //             valueExpr="value"
+                    //             showSelectionControls={true}
+                    //             showClearButton={true}
+                    //             showDropDownButton={true}
+                    //             searchEnabled={true}
+                    //             disabled={this.state.disabled}
+                    //             itemComponent={valueComp}
+                    //             inputAttr={{ class: 'valueComp' }}
+                    //             applyValueMode="useButtons"
+                    //             // hideSelectedItems={true}
+                    //             // multiline={true}
+                    //             maxDisplayedTags={4}
+                    //             value={this.state.values}
+                    //             onValueChanged={this.tagBoxValueChanged}
+                    //         >
+                    //         </TagBox>
+                    //     );
+                    // }
+                    // else 
+                    return (
+                        <DropDownBox
+                            dataSource={this.valueSource}
+                            displayExpr="text"
+                            valueExpr="value"
+                            value={this.state.values}
+                            opened={this.state.isListOpened}
+                            deferRendering={false}
+                            showClearButton={true}
+                            disabled={!this.state.checked}
+                            contentRender={this.listRender}
+                            itemComponent={valueComp}
+                            inputAttr={{ class: 'valueComp' }}
+                            onOptionChanged={this.dropDownOptionChanged}
+                            onValueChanged={this.dropDownValueChanged}
+                        />
+                    );
                 }
                 break;
         }
@@ -270,54 +271,43 @@ class FilterItem extends Component {
     }
 
     dateChanged = (el) => {
-        runInAction(() => {
-            let item = store.filterItems.find(el => el.uid === this.props.uid);
-            item.values = [formatDate(el.value)];
-            //console.log('dateChanged:', formatDate(el.value));
-        });
+        const item = store.getFilterItem(this.props.uid);
+        item.values = [formatDate(el.value)];
+        this.setState({ values: item.values });
     }
 
     numberChanged = (el) => {
-        runInAction(() => {
-            let item = store.filterItems.find(el => el.uid === this.props.uid);
-            item.values = [el.value];
-            //console.log('dateChanged:', formatDate(el.value));
-        });
+        const item = store.getFilterItem(this.props.uid);
+        item.values = [el.value];
+        this.setState({ values: item.values });
     }
 
     value1Changed = (el) => {
-        //console.log('value1Changed', el.value)
-        runInAction(() => {
-            let item = store.filterItems.find(el => el.uid === this.props.uid);
-            if (!Array.isArray(item.values)) item.values = [null, null];
-            item.values[0] = formatDate(el.value);
-            //console.log('value1Changed:', formatDate(el.value));
-        });
+        const item = store.getFilterItem(this.props.uid);
+        if (!Array.isArray(item.values)) item.values = [null, null];
+        item.values[0] = formatDate(el.value);
+        this.setState({ values: item.values });
     }
 
     value2Changed = (el) => {
-        runInAction(() => {
-            let item = store.filterItems.find(el => el.uid === this.props.uid);
-            if (!Array.isArray(item.values)) item.values = [null, null];
-            item.values[1] = formatDate(el.value);
-            // console.log('value2Changed:', formatDate(el.value));
-        });
+        const item = store.getFilterItem(this.props.uid);
+        if (!Array.isArray(item.values)) item.values = [null, null];
+        item.values[1] = formatDate(el.value);
+        this.setState({ values: item.values });
     }
 
     number1Changed = (el) => {
-        runInAction(() => {
-            let item = store.filterItems.find(el => el.uid === this.props.uid);
-            if (!Array.isArray(item.values)) item.values = [null, null];
-            item.values[0] = el.value;
-        });
+        const item = store.getFilterItem(this.props.uid);
+        if (!Array.isArray(item.values)) item.values = [null, null];
+        item.values[0] = el.value;
+        this.setState({ values: item.values });
     }
 
     number2Changed = (el) => {
-        runInAction(() => {
-            let item = store.filterItems.find(el => el.uid === this.props.uid);
-            if (!Array.isArray(item.values)) item.values = [null, null];
-            item.values[1] = el.value;
-        });
+        const item = store.getFilterItem(this.props.uid);
+        if (!Array.isArray(item.values)) item.values = [null, null];
+        item.values[1] = el.value;
+        this.setState({ values: item.values });
     }
 
     listOptionChanged = (el) => {
@@ -343,6 +333,7 @@ class FilterItem extends Component {
 
         let item = store.getFilterItem(this.props.uid);
         item.dataType = atrib.dataType;
+        item.fk_fld = el.value;
 
         switch (atrib.dataType) {
             case 'fk':
@@ -356,25 +347,17 @@ class FilterItem extends Component {
                 arr = arr.filter(item => item.code !== 'IN' && item.code !== 'NOT IN');
                 break;
         }
-        //console.log(this.state.oper)
 
-        this.setState({ operSource: arr }, () => {
+        this.setState({ operSource: arr, fk_fld: el.value }, () => {
             if (!arr.find(el => el.code === this.state.oper)) {
                 this.setState({ oper: '=' });
             }
 
             if (el.element) {
                 this.setState({ values: null });
-                let item = store.filterItems.find(el => el.uid === this.props.uid);
                 item.values = null;
             }
         });
-
-        runInAction(() => {
-            let item = store.filterItems.find(el => el.uid === this.props.uid);
-            item.fk_fld = el.value;
-        });
-
     }
 
     onOperChanged = (el) => {
@@ -397,11 +380,9 @@ class FilterItem extends Component {
     }
 
     onCheckChanged = (el) => {
-        this.setState({ disabled: !el.value });
-        runInAction(() => {
-            let item = store.getFilterItem(this.props.uid); //store.filterItems.find(el => el.uid === this.props.uid);
-            item.disabled = !el.value;
-        });
+        this.setState({ checked: el.value });
+        let item = store.getFilterItem(this.props.uid);
+        item.checked = el.value;
     }
 
     addClick = (el) => {
@@ -417,7 +398,7 @@ class FilterItem extends Component {
         return (
             <div style={{ display: "flex", flexDirection: "row", marginTop: "5px" }}>
                 <div>
-                    <CheckBox value={true} iconSize={27} disabled={this.props.required} onValueChanged={this.onCheckChanged} />
+                    <CheckBox value={this.state.checked} iconSize={27} disabled={this.props.required} onValueChanged={this.onCheckChanged} />
                 </div>
 
                 <div style={{ marginLeft: "2px" }}>
@@ -427,10 +408,10 @@ class FilterItem extends Component {
                         valueExpr="fk_fld"
                         placeholder="Выберите столбец"
                         width={250}
-                        value={this.props.fk_fld}
+                        value={this.state.fk_fld}
                         itemComponent={atribComp}
                         searchEnabled={true}
-                        disabled={this.props.disabled || this.state.disabled || this.props.required}
+                        disabled={this.props.required || !this.state.checked}
                         onValueChanged={this.onAtribChanged}
                     />
                 </div>
@@ -448,37 +429,23 @@ class FilterItem extends Component {
                         placeholder="Выберите условие"
                         inputAttr={{ id: 'operComp' }}
                         itemComponent={operComp}
-                        disabled={this.props.disabled || this.state.disabled || this.props.required}
+                        disabled={this.props.required || !this.state.checked}
                         onValueChanged={this.onOperChanged}
                     />
                 </div>
 
                 <div style={{ flexGrow: "1", backgroundColor: "white" }}>{this.makeValues()}</div>
 
-                <div style={{marginLeft: "1px"}}>
+                <div style={{ marginLeft: "1px" }}>
                     <Button icon="minus" type="danger" stylingMode="outlined" disabled={this.props.required} onClick={this.removeClick} />
                 </div>
 
-                <div style={{marginLeft: "1px"}}>
+                <div style={{ marginLeft: "1px" }}>
                     <Button icon="plus" type="normal" stylingMode="outlined" onClick={this.addClick} />
                 </div>
             </div>
         );
     }
-}
-
-const formatDate = (date) => {
-    if (!date) return "";
-
-    var dd = date.getDate();
-    if (dd < 10) dd = '0' + dd;
-
-    var mm = date.getMonth() + 1;
-    if (mm < 10) mm = '0' + mm;
-
-    var yy = date.getFullYear();
-
-    return `${yy}${mm}${dd}`;
 }
 
 export default observer(FilterItem);

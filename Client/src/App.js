@@ -80,7 +80,7 @@ const gridSource = new CustomStore({
             let where = [];
 
             store.filterItems.forEach(item => {
-                if (item.required || !item.disabled) {
+                if (item.checked) {
                     where.push({
                         fk_fld: item.fk_fld,
                         oper: item.oper,

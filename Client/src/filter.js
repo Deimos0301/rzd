@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { observer } from 'mobx-react';
 import { toJS } from 'mobx';
-import store from './store';
+import store, {formatDate} from './store';
 import { v4 as uuidv4 } from 'uuid';
 import { Toolbar, Item } from 'devextreme-react/toolbar';
 import FilterItem from './filterItem';
@@ -17,18 +17,18 @@ class Filter extends Component {
     }
 
     itemsToElements = () => {
-        const arr = store.filterItems.map(item => 
-            <FilterItem 
+        const arr = store.filterItems.map(item =>
+            <FilterItem
                 uid={item.uid}
                 key={item.uid}
                 fk_fld={item.fk_fld}
-                oper={item.oper} 
+                oper={item.oper}
                 values={item.values}
                 required={item.required}
-                disabled={item.disabled}
+                checked={item.checked}
                 addFilterItem={this.addFilterItem}
-                deleteFilterItem={this.deleteFilterItem} 
-                updateFilterHeight={this.updateFilterHeight} 
+                deleteFilterItem={this.deleteFilterItem}
+                updateFilterHeight={this.updateFilterHeight}
             />
         );
         //console.log(arr);
@@ -36,22 +36,33 @@ class Filter extends Component {
     }
 
     loadFilter = () => {
-       
+
         if (!store.getFilterItem('00000')) {
-            store.filterItems.push({ uid: '00000', fk_fld: "PROD_KIND_ID", oper: "=", values: [1], disabled: false, required: true });
-        }
-        if (!store.getFilterItem('11111')) {
-            store.filterItems.push({ uid: '11111', fk_fld: "REGION_ID_IN", oper: "IN", values: [58, 26], disabled: false, required: false });
-        }
-        if (!store.getFilterItem('22222')) {
-            store.filterItems.push({ uid: '22222', fk_fld: "CARGO_TONNAGE", oper: "BETWEEN", values: [10, 20], disabled: false, required: false });
+            store.filterItems.push({ uid: '00000', fk_fld: "PROD_KIND_ID", oper: "=", values: [1], checked: true, required: true });
         }
 
-        this.setState({filterElements: this.itemsToElements()});
+        if (!store.getFilterItem('44444')) {
+            store.filterItems.push({ uid: '44444', fk_fld: "CARRY_DIRECT_ID", oper: "IN", values: [2], checked: true, required: false });
+        }
+
+        if (!store.getFilterItem('33333')) {
+            let MinDate = new Date(store.maxDate);
+            MinDate.setMonth(store.maxDate.getMonth() - 1);
+            store.filterItems.push({ uid: '33333', fk_fld: "DATE_IN", oper: "BETWEEN", values: [formatDate(MinDate), formatDate(store.maxDate)], checked: true, required: false });
+        }
+
+        // if (!store.getFilterItem('11111')) {
+        //     store.filterItems.push({ uid: '11111', fk_fld: "REGION_ID_IN", oper: "IN", values: [58, 26], disabled: false, required: false });
+        // }
+        // if (!store.getFilterItem('22222')) {
+        //     store.filterItems.push({ uid: '22222', fk_fld: "CARGO_TONNAGE", oper: "BETWEEN", values: [10, 20], disabled: false, required: false });
+        // }
+
+        this.setState({ filterElements: this.itemsToElements() });
     }
 
     addFilterItem = (srcUid) => {
-        
+
         let idx = -1;
         store.filterItems.forEach((item, index) => {
             if (item.uid === srcUid) {
@@ -64,11 +75,11 @@ class Filter extends Component {
 
         //store.setFilterItems(arr);
 
-        this.setState({filterElements: this.itemsToElements()});
+        this.setState({ filterElements: this.itemsToElements() });
         this.updateFilterHeight();
-        
+
         // store.filterItems.push({ uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
-        
+
         // this.setState({filterElements: this.itemsToElements()});
         // this.updateFilterHeight();
     }
@@ -98,11 +109,6 @@ class Filter extends Component {
         // this.loadFilter();
         console.log(this.state.filterElements);
         console.log(toJS(store.filterItems));
-    }
-
-    atribChange = (el, uid) => {
-        let aaa = this.state.filterElements.find(item => item.props.uid === uid);
-        console.log(el)
     }
 
     render() {

@@ -1,6 +1,34 @@
 //import React, {Component} from "react";
 import { action, observable, makeObservable, computed } from 'mobx';
 
+export const formatDate = (date) => {
+    if (!date) return null;
+    
+    if (typeof date === 'string' && date.length === 8 && date.startsWith('2')) {
+        const yy = date.slice(0, 4);
+        const mm = date.slice(4, 6);
+        const dd = date.slice(6, 8);
+        date = new Date(`${yy}-${mm}-${dd}`);
+    }
+    else
+        date = new Date(date);
+
+    try {
+        var dd = date.getDate();
+        if (dd < 10) dd = '0' + dd;
+
+        var mm = date.getMonth() + 1;
+        if (mm < 10) mm = '0' + mm;
+
+        var yy = date.getFullYear();
+
+        return `${yy}${mm}${dd}`;
+    }
+    catch (e) {
+        return null;
+    }
+}
+
 class Store {
     tables = [];
     filterElements = []; // Массив элементов JSX
@@ -28,12 +56,12 @@ class Store {
             setLinesCount: action,
             setFilterOpened: action,
             setFieldsOpened: action
-        });        
+        });
     }
 
     getTables = async () => {
         if (this.tables.length > 0) return;
-        
+
         const arr = await fetch('/api/getSpr');
         const js = await arr.json();
 
@@ -61,10 +89,10 @@ class Store {
 
     getMetaData = async () => {
         await Promise.all([
-                store.getTables(),
-                store.getGridStruct(),
-                store.getMaxDate()
-           ]
+            store.getTables(),
+            store.getGridStruct(),
+            store.getMaxDate()
+        ]
         );
     };
 
