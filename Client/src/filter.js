@@ -71,17 +71,10 @@ class Filter extends Component {
             }
         });
 
-        store.filterItems.splice(idx, 0, { uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
-
-        //store.setFilterItems(arr);
+        store.filterItems.splice(idx, 0, { uid: uuidv4(), fk_fld: "", oper: "=", values: [], checked: true, required: false });
 
         this.setState({ filterElements: this.itemsToElements() });
         this.updateFilterHeight();
-
-        // store.filterItems.push({ uid: uuidv4(), fk_fld: "", oper: "=", values: [], disabled: false });
-
-        // this.setState({filterElements: this.itemsToElements()});
-        // this.updateFilterHeight();
     }
 
     deleteFilterItem = (uid) => {
@@ -106,8 +99,7 @@ class Filter extends Component {
     }
 
     saveClick = () => {
-        // this.loadFilter();
-        console.log(this.state.filterElements);
+        console.log(store.unProxyGridStruct());
         console.log(toJS(store.filterItems));
     }
 

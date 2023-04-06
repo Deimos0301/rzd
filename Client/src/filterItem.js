@@ -103,40 +103,37 @@ class FilterItem extends Component {
     }
 
     makeValues = () => {
-        let item = store.filterItems.find(el => el.uid === this.props.uid);
+        const {fk_fld, oper, values, checked} = this.state;
 
-        if (!item.fk_fld || !item.oper) return;
-        //console.log(toJS(item));
+        const atrib = store.tables.find(el => el.fk_fld === fk_fld);
 
-        const tab = store.tables.find(tab => tab.fk_fld === item.fk_fld);
-
-        if (!tab) return;
+        if (!atrib) return;
 
         let val1 = null;
         let val2 = null;
 
-        if (Array.isArray(this.state.values)) {
-            if (this.state.values.length > 0)
-                val1 = this.state.values[0];
-            if (this.state.values.length > 1)
-                val2 = this.state.values[1];
+        if (Array.isArray(values)) {
+            if (values.length > 0)
+                val1 = values[0];
+            if (values.length > 1)
+                val2 = values[1];
         }
 
-        switch (tab.dataType) {
+        switch (atrib.dataType) {
             case 'date':
             case "number":
-                if (['BETWEEN', 'NOT BETWEEN'].includes(item.oper)) {
+                if (['BETWEEN', 'NOT BETWEEN'].includes(oper)) {
                     return (
                         <div style={{ display: "flex", flexDirection: "row", width: "100%" }}>
                             <div style={{ lineHeight: "27px", maxWidth: "27px", minWidth: "27px", textAlign: "center", fontWeight: "bold" }}> С: </div>
 
                             <div style={{ flexGrow: "1" }}>
                                 {
-                                    tab.dataType === 'number'
+                                    atrib.dataType === 'number'
                                         ?
-                                        <NumberBox value={val1 || 0} showSpinButtons={true} disabled={!this.state.checked} onValueChanged={this.number1Changed} inputAttr={{ class: 'valueComp' }} />
+                                        <NumberBox value={val1 || 0} showSpinButtons={true} disabled={!checked} onValueChanged={this.number1Changed} inputAttr={{ class: 'valueComp' }} />
                                         :
-                                        <DateBox value={val1} onValueChanged={this.value1Changed} disabled={!this.state.checked} inputAttr={{ class: 'valueComp' }} />
+                                        <DateBox value={val1} onValueChanged={this.value1Changed} disabled={!checked} inputAttr={{ class: 'valueComp' }} />
                                 }
                             </div>
 
@@ -144,11 +141,11 @@ class FilterItem extends Component {
 
                             <div style={{ flexGrow: "1" }}>
                                 {
-                                    tab.dataType === 'number'
+                                    atrib.dataType === 'number'
                                         ?
-                                        <NumberBox value={val2 || 0} showSpinButtons={true} disabled={!this.state.checked} onValueChanged={this.number2Changed} inputAttr={{ class: 'valueComp' }} />
+                                        <NumberBox value={val2 || 0} showSpinButtons={true} disabled={!checked} onValueChanged={this.number2Changed} inputAttr={{ class: 'valueComp' }} />
                                         :
-                                        <DateBox value={val2} onValueChanged={this.value2Changed} disabled={!this.state.checked} inputAttr={{ class: 'valueComp' }} />
+                                        <DateBox value={val2} onValueChanged={this.value2Changed} disabled={!checked} inputAttr={{ class: 'valueComp' }} />
                                 }
                             </div>
                         </div>
@@ -156,12 +153,12 @@ class FilterItem extends Component {
                 }
                 else {
                     return (
-                        tab.dataType === 'number'
+                        atrib.dataType === 'number'
                             ?
-                            <NumberBox value={val1 || 0} showSpinButtons={true} disabled={!this.state.checked} inputAttr={{ class: 'valueComp' }} onValueChanged={this.numberChanged} />
+                            <NumberBox value={val1 || 0} showSpinButtons={true} disabled={!checked} inputAttr={{ class: 'valueComp' }} onValueChanged={this.numberChanged} />
                             :
                             <DateBox
-                                disabled={!this.state.checked}
+                                disabled={!checked}
                                 value={val1 instanceof Date && !isNaN(date) ? val1 : null}
                                 inputAttr={{ class: 'valueComp' }}
                                 onValueChanged={this.dateChanged}
@@ -169,44 +166,20 @@ class FilterItem extends Component {
                     );
                 }
             default:
-                if (['=', '<>', 'IN', 'NOT IN'].includes(item.oper)) {
-                    this.valueSource = tab.data;
-                    this.selectionMode = ['=', '<>'].includes(item.oper) ? 'single' : 'multiple';
+                if (['=', '<>', 'IN', 'NOT IN'].includes(oper)) {
+                    this.valueSource = atrib.data;
+                    this.selectionMode = ['=', '<>'].includes(oper) ? 'single' : 'multiple';
 
-                    // if (this.selectionMode === 'multiple') {
-                    //     return (
-                    //         <TagBox
-                    //             dataSource={this.valueSource}
-                    //             displayExpr="text"
-                    //             valueExpr="value"
-                    //             showSelectionControls={true}
-                    //             showClearButton={true}
-                    //             showDropDownButton={true}
-                    //             searchEnabled={true}
-                    //             disabled={this.state.disabled}
-                    //             itemComponent={valueComp}
-                    //             inputAttr={{ class: 'valueComp' }}
-                    //             applyValueMode="useButtons"
-                    //             // hideSelectedItems={true}
-                    //             // multiline={true}
-                    //             maxDisplayedTags={4}
-                    //             value={this.state.values}
-                    //             onValueChanged={this.tagBoxValueChanged}
-                    //         >
-                    //         </TagBox>
-                    //     );
-                    // }
-                    // else 
                     return (
                         <DropDownBox
                             dataSource={this.valueSource}
                             displayExpr="text"
                             valueExpr="value"
-                            value={this.state.values}
+                            value={values}
                             opened={this.state.isListOpened}
                             deferRendering={false}
                             showClearButton={true}
-                            disabled={!this.state.checked}
+                            disabled={!checked}
                             contentRender={this.listRender}
                             itemComponent={valueComp}
                             inputAttr={{ class: 'valueComp' }}
@@ -398,7 +371,7 @@ class FilterItem extends Component {
         return (
             <div style={{ display: "flex", flexDirection: "row", marginTop: "5px" }}>
                 <div>
-                    <CheckBox value={this.state.checked} iconSize={27} disabled={this.props.required} onValueChanged={this.onCheckChanged} />
+                    <CheckBox value={this.state.checked} iconSize={26} disabled={this.props.required} onValueChanged={this.onCheckChanged} />
                 </div>
 
                 <div style={{ marginLeft: "2px" }}>

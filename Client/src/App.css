@@ -40,6 +40,12 @@ body {
   margin-top: 5px;
 }
 
+.dx-datagrid-content 
+.dx-datagrid-table
+.dx-row > td {
+    vertical-align: middle;
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);

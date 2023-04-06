@@ -3,9 +3,7 @@ const express = require('express');
 var bodyParser = require('body-parser');
 const path = require('path');
 var beautify = require("json-beautify");
-const Readable = require('stream').Readable;
 const sql = require("mssql");
-const { query } = require("express");
 var bodyParser = require('body-parser');
 const { Store } = require('./serverStore');
 
@@ -16,7 +14,7 @@ const app = express();
 
 app.use(express.json({ limit: '5mb' }));
 app.use(bodyParser.urlencoded({
-    limit: '5mb',
+    limit: '10mb',
     extended: true,
     parameterLimit: 50000
 }));
@@ -73,12 +71,10 @@ const filterToSQL = (item, res) => {
             let spr = store.tables.find(spr => spr.fk_display_fld === item[0]);
 
             if (spr && spr.data) {
+                item[0] = '[' + spr.fk_fld + ']';
                 const row = spr.data.find(data => data.text === item[2]);
-                if (row) {
-                    item[0] = spr.fk_fld;
+                if (row) 
                     item[2] = row.value;
-                    //console.log(row);
-                }
             }
 
             let op = '';
@@ -107,7 +103,7 @@ const filterToSQL = (item, res) => {
 
             //let val = typeof item[2] === 'number' ? item[2] : `'${item[1] === 'like' ? '%' + item[2] + '%' : item[2]}'`;
 
-            res += item[0] + ' ' + op + ' ' + val;
+            res += 'a.' + item[0] + ' ' + op + ' ' + val;
         }
         else
             item.map(it => {
@@ -157,12 +153,12 @@ const whereToSQL = (where) => {
         }
         else if (['IN', 'NOT IN'].includes(el.oper))
             return '(' + el.values.join(', ') + ')';
-        else 
+        else
             return el.dataType === 'fk' ? el.values[0] : `'${el.values[0]}'`;
     };
 
     JSON.parse(where).forEach(el => {
-        res.push(`[${el.fk_fld}] ${el.oper} ${parseVal(el)}`);
+        res.push(`a.[${el.fk_fld}] ${el.oper} ${parseVal(el)}`);
     });
 
     return res.join(' and ');
@@ -178,21 +174,17 @@ app.post('/api/getData', urlencodedParser, async (req, res) => {
 
     res.set('Content-Type', 'application/json');
 
-    const { skip, take, group, groupSummary, totalSummary, requireTotalCount } = req.body.params;
-
-    //console.log(req.query);
-
-    //const request = pool.request();
+    const { skip, take, group, groupSummary, totalSummary, requireTotalCount, requireGroupCount } = req.body.params;
 
     let orderBy = getOrderBy(req.body.params.sort);
 
     let filter = req.body.params.filter ? getFilter(req.body.params.filter) : '(1=1)';
     let where = req.body.params.where ? whereToSQL(req.body.params.where) : "(2=2)";
 
-    if (requireTotalCount) {
+    if (requireTotalCount === 'true') {
         let cash = totalCash.find(item => item.filter === filter && item.where === where);
         if (!cash) {
-            let arr = await store.query(`select Count(*) as totalCount from RZD.Data_A where ${filter} and ${where}`);
+            let arr = await store.query(`select Count(*) as totalCount from RZD.Data_A a where ${filter} and ${where}`);
             store.totalCount = arr[0].totalCount;
             totalCash.push({ filter: filter, totalCount: arr[0].totalCount });
         }
@@ -210,12 +202,14 @@ app.post('/api/getData', urlencodedParser, async (req, res) => {
 
             let cash = groupCash.find(el => el.filter === filter && el.group === groupName && el.desc === item.desc && el.where === where);
 
-            if (cash) {
-                groupCount = cash.groupCount;
-            }
-            else {
-                let arr = await store.query(`select Count(distinct ${fk_fld}) as cnt from RZD.Data_A where ${filter} and ${where}`);
-                groupCount = arr[0].cnt;
+            if (requireGroupCount === 'true') {
+                if (cash) {
+                    groupCount = cash.groupCount;
+                }
+                else {
+                    const arr = await store.query(`select Count(distinct a.${fk_fld}) as cnt from RZD.Data_A a where ${filter} and ${where}`);
+                    groupCount = arr[0].cnt;
+                }
             }
 
             let data = [];
@@ -227,10 +221,11 @@ app.post('/api/getData', urlencodedParser, async (req, res) => {
             }
             else {
                 const sql = `
-                select ${spr.pk_display_fld} as "key", 
+                select 
+                    b.${spr.pk_display_fld} as "key", 
                     NULL as items,
                     Count(*) as "count",
-                Sum(CARGO_TONNAGE) as "summa"
+                Sum(a.CARGO_TONNAGE) as "summa"
                 from RZD.[Data_A] a
                 join ${spr.tab_name} b on b.${spr.pk_fld} = a.${spr.fk_fld}
                 where ${filter} and ${where}
@@ -251,12 +246,15 @@ app.post('/api/getData', urlencodedParser, async (req, res) => {
                 });
             }
 
-            let result = { data: data, groupCount: groupCount };
+            let result = { data: data };
+            
+            if (groupCount)
+                result = { ...result, groupCount: groupCount };
 
             if (totalSummary)
                 result = { ...result, summary: [store.totalCount] };
 
-            if (requireTotalCount)
+            if (requireTotalCount === 'true')
                 result = { ...result, totalCount: store.totalCount };
 
             res.json(result);
@@ -265,7 +263,7 @@ app.post('/api/getData', urlencodedParser, async (req, res) => {
     }
 
     const SQL = `
-    select * from RZD.RZD_Data#02
+    select * from RZD.RZD_Data#02 a
     where ${filter} and ${where}
     order by ${orderBy}
     offset ${skip || 0} rows
@@ -295,3 +293,8 @@ app.post('/api/getData', urlencodedParser, async (req, res) => {
 
 });
 
+app.post('/api/setGridStruct', urlencodedParser, async (req, res) => {
+    const request = pool.request();
+    await request.query(`exec RZD.UpdateGridStruct @Json = '${JSON.stringify(req.body.json)}', @Profile_ID = ${req.body.Profile_ID}`);
+    res.end('OK');
+});

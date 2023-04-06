@@ -1,7 +1,7 @@
 //import React, {Component} from "react";
-import { action, observable, makeObservable, computed } from 'mobx';
+import { action, observable, makeObservable, toJS } from 'mobx';
 
-export const formatDate = (date) => {
+export const formatDate = (date, isRussian) => {
     if (!date) return null;
     
     if (typeof date === 'string' && date.length === 8 && date.startsWith('2')) {
@@ -22,7 +22,10 @@ export const formatDate = (date) => {
 
         var yy = date.getFullYear();
 
-        return `${yy}${mm}${dd}`;
+        if (isRussian)
+            return `${dd}.${mm}.${yy}`;
+        else
+            return `${yy}${mm}${dd}`;
     }
     catch (e) {
         return null;
@@ -41,7 +44,7 @@ class Store {
 
     constructor() {
         makeObservable(this, {
-            tables: observable,
+            // tables: observable,
             filterElements: observable,
             //filterItems: observable,
             gridStruct: observable,
@@ -95,6 +98,10 @@ class Store {
         ]
         );
     };
+
+    unProxyGridStruct = () => {
+        return this.gridStruct.map(el => toJS(el));
+    }
 
     setTables = (data) => { this.tables = [...data]; }
 

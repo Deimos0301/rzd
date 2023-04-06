@@ -7,7 +7,7 @@ import CustomStore from 'devextreme/data/custom_store';
 import { Button } from 'devextreme-react/button';
 import DataGrid, {
     RemoteOperations, Scrolling, GroupPanel, Paging, Pager, Grouping,
-    Column, SearchPanel, HeaderFilter, GroupItem, Summary, TotalItem,
+    Sorting, SearchPanel, HeaderFilter, GroupItem, Summary, TotalItem,
     FilterPanel, FilterBuilderPopup, FilterRow
 } from 'devextreme-react/data-grid';
 import './App.css';
@@ -20,8 +20,9 @@ import { locale, loadMessages } from "devextreme/localization";
 
 import { ReactComponent as LogoSVG } from './img/rzd.svg';
 
-import store from './store';
+import store, { formatDate } from "./store";
 import Filter from './filter.js';
+import Columns from './columns';
 import { toJS } from 'mobx';
 
 const isNotEmpty = (value) => value !== undefined && value !== null && value !== '';
@@ -32,12 +33,13 @@ let formatter = new Intl.NumberFormat("ru", {
 });
 
 const GroupCell = (el, data) => {
-    el.append(data.value + ` (Строк: ${data.data.count}, Вес: ${formatter.format(data.data.summa)} т)`);
+    let val = data.value;
+    if (val instanceof Date)
+        val = formatDate(val, true);
+    el.append(val + ` (Строк: ${data.data.count}, Вес: ${formatter.format(data.data.summa)} т)`);
 };
 
 const getData = async (params) => {
-    await store.getTables();
-
     const data = await fetch(`/api/getData`, {
         method: "POST",
         headers: {
@@ -80,7 +82,7 @@ const gridSource = new CustomStore({
             let where = [];
 
             store.filterItems.forEach(item => {
-                if (item.checked) {
+                if (item.checked && item.fk_fld && item.oper && item.values && Array.isArray(item.values) && item.values[0]) {
                     where.push({
                         fk_fld: item.fk_fld,
                         oper: item.oper,
@@ -123,15 +125,18 @@ class App extends React.Component {
     componentDidMount = async () => {
         await store.getMetaData();
 
-        const grid = this.grid.current.instance;
-
         this.filter.current.loadFilter();
-
-        grid.beginUpdate();
 
         let MinDate = new Date(store.maxDate);
         MinDate.setMonth(store.maxDate.getMonth() - 2);
 
+        this.gridStructToColumns();
+    }
+
+    gridStructToColumns = () => {
+        const grid = this.grid.current.instance;
+
+        grid.beginUpdate();
 
         let cols = [];
 
@@ -151,34 +156,22 @@ class App extends React.Component {
                 groupCellTemplate: GroupCell,
                 tab_name: src ? src.tab_name : undefined,
                 allowGrouping: row.DATA_TYPE != 'number',
+                visible: row.IS_VISIBLE,
+                sortOrder: row.SORT.toLowerCase(),
                 groupIndex: row.IS_GROUP ? maxGroupIndex : -1
             });
         });
 
-        const flt = [
-            ['CARRY_DIRECT_NAME', 'anyof', ['Внутр. перевозк']],
-            // "and",
-            // [ 'PROD_KIND_NAME', 'anyof', ['Нефть и нефтепродукты']],
-            "and",
-            ['DATE_IN', 'between', [MinDate, store.maxDate]]
-        ];
-
         this.setState({ columns: cols }, () => {
-            // const grid = this.grid.current.instance;
-            cols.forEach(col => {
-                if (col.tab_name) {
-                    const src = store.tables.find(item => item.fk_display_fld === col.dataField);
-                    grid.columnOption(col.dataField, 'headerFilter.dataSource', src.data);
-                }
-                //});
-            });
+            // cols.forEach(col => {
+            //     if (col.tab_name) {
+            //         const src = store.tables.find(item => item.fk_display_fld === col.dataField);
+            //         grid.columnOption(col.dataField, 'headerFilter.dataSource', src.data);
+            //     }
+            // });
             grid.endUpdate();
         });
     }
-
-    // contentReady = () => {
-    //     this.setState({loadPanelVisible: false});
-    // }
 
     customizeDate = (cellInfo) => {
         return new Date(cellInfo.value).toLocaleDateString();
@@ -201,9 +194,45 @@ class App extends React.Component {
     }
 
     updateFilterHeight = () => {
-        const h = (86 + store.filterItems.length * 32).toString() + 'px';
+        const h = (80 + store.filterItems.length * 31).toString() + 'px';
 
         this.setState({ filterHeight: h });
+    }
+
+    gridOptionChanged = (e) => {
+        if (e.name === 'columns') {
+            const action = e.fullName.split('.')[1];
+            const oldIdx = Number(e.fullName.split('.')[0].split('columns')[1].replace('[', '').replace(']', ''));
+
+            let arr = [...store.gridStruct];
+
+            if (action === 'groupIndex') {
+                arr[oldIdx].IS_GROUP = e.value;
+                arr[oldIdx].SORT = e.value === 1 ? 'ASC' : 'NONE';
+                store.setGridStruct(arr);
+            }
+
+            if (action === 'sortOrder') {
+                arr[oldIdx].SORT = !e.value ? 'NONE' : e.value.toUpperCase();
+                store.setGridStruct(arr);
+            }
+
+            if (action === 'visibleIndex') {
+                const newIdx = Number(e.value);
+
+                arr[newIdx].ATRIB_ORDER = oldIdx;
+                arr[oldIdx].ATRIB_ORDER = newIdx;
+
+                arr = arr.sort((a, b) => Number(a.ATRIB_ORDER) - Number(b.ATRIB_ORDER));
+                arr.forEach((el, idx) => {el.ATRIB_ORDER = idx + 1});
+                store.setGridStruct(arr);
+                console.log(store.unProxyGridStruct());
+            }
+        }
+    }
+
+    applyGridStruct = () => {
+        this.gridStructToColumns();
     }
 
     refreshData = () => {
@@ -225,8 +254,10 @@ class App extends React.Component {
                 <div style={{ marginBottom: "4px" }} />
 
                 <Box direction='row' width="100%" height="calc(100vh - 40px)">
-                    <BoxItem ratio={0} baseSize="350px" visible={store.fieldsOpened}>
-                        <Container title="Столбцы" closeButton={true} onCloseClick={this.closeFields} />
+                    <BoxItem ratio={0} baseSize="450px" visible={store.fieldsOpened}>
+                        <Container title="Столбцы" closeButton={true} onCloseClick={this.closeFields}>
+                            <Columns refreshData={this.refreshData} applyGridStruct={this.applyGridStruct} />
+                        </Container>
                     </BoxItem>
 
                     <BoxItem ratio={2}>
@@ -260,9 +291,10 @@ class App extends React.Component {
                                         columnWidth={300}
                                         filterValue={this.state.filterValue}
                                         onRowExpanding={this.rowExpanding}
-                                    // onContentReady={this.contentReady}
+                                        onOptionChanged={this.gridOptionChanged}
                                     >
                                         <RemoteOperations groupPaging={true} />
+                                        <Sorting mode="multiple" />
                                         <Scrolling mode="virtual" />
                                         <Grouping autoExpandAll={false} />
                                         <GroupPanel visible={true} />
