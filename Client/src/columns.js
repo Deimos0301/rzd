@@ -69,11 +69,11 @@ class Columns extends Component {
 
         newStruct.splice(fromIndex, 1);
         newStruct.splice(toIndex, 0, e.itemData);
-console.log(fromIndex, toIndex);
+
 
         store.setGridStruct(newStruct);
         
-        console.log(store.unProxyGridStruct());
+        //console.log(store.unProxyGridStruct());
 
         this.props.refreshData();
     }
