@@ -11,6 +11,10 @@ const sortData = [
 ];
 
 class Columns extends Component {
+    cellRender = (data) => {
+        return <div style={{fontWeight: "bold", fontSize: "12px"}}>{data.value}</div>
+    }
+
     render() {
         return (
             <>
@@ -43,7 +47,7 @@ class Columns extends Component {
                     <Editing mode="cell" allowAdding={false} allowDeleting={false} allowUpdating={true} />
 
                     <Column dataField="IS_VISIBLE" width={35} caption="Вкл" alignment="center" />
-                    <Column dataField="ATRIB_GRID_NAME" caption="Название столбца" allowEditing={true} />
+                    <Column dataField="ATRIB_GRID_NAME" caption="Название столбца" allowEditing={true} cellRender={this.cellRender}/>
                     <Column dataField="ATRIB_ALIAS" caption="Имя поля" allowEditing={false} visible={false} />
                     <Column dataField="SORT" caption="Сортировка" width={80} allowEditing={true}>
                         <Lookup dataSource={sortData} valueExpr="value" displayExpr="text" />
