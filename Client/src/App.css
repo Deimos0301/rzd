@@ -1,5 +1,13 @@
 .App {
   text-align: center;
+  height: 100vh;
+  display: flex;
+}
+
+html,
+body {
+  margin: 0;
+  min-width: 360px;
 }
 
 .App-logo {
@@ -26,6 +34,10 @@
 
 .App-link {
   color: #61dafb;
+}
+
+.dx-toolbar-items-container {
+  margin-top: 5px;
 }
 
 @keyframes App-logo-spin {

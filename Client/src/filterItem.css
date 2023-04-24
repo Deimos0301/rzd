@@ -1,0 +1,37 @@
+.dx-texteditor-input {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.dx-tag-content {
+    color: navy;
+    font-weight: 600;
+}
+
+.date-param {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #a52a2a0d;
+    height: 26px;
+    width: 26px;
+    border-top: 1px solid #00000021;
+    border-bottom: 1px solid #00000021;
+}
+
+#operComp {
+    color: brown;
+}
+
+.valueComp {
+    color: navy;
+}
+
+.date_box {
+    flex-grow: 1;
+    color: navy;
+}
+
+/* .dx-texteditor-input {
+    color: navy;
+} */

@@ -3,9 +3,8 @@ const express = require('express');
 var bodyParser = require('body-parser');
 const path = require('path');
 var beautify = require("json-beautify");
-const Readable = require('stream').Readable;
 const sql = require("mssql");
-const { query } = require("express");
+var bodyParser = require('body-parser');
 const { Store } = require('./serverStore');
 
 const pool = new sql.ConnectionPool(config.mssql);
@@ -15,7 +14,7 @@ const app = express();
 
 app.use(express.json({ limit: '5mb' }));
 app.use(bodyParser.urlencoded({
-    limit: '5mb',
+    limit: '10mb',
     extended: true,
     parameterLimit: 50000
 }));
@@ -72,12 +71,10 @@ const filterToSQL = (item, res) => {
             let spr = store.tables.find(spr => spr.fk_display_fld === item[0]);
 
             if (spr && spr.data) {
+                item[0] = '[' + spr.fk_fld + ']';
                 const row = spr.data.find(data => data.text === item[2]);
-                if (row) {
-                    item[0] = spr.fk_fld;
+                if (row) 
                     item[2] = row.value;
-                    //console.log(row);
-                }
             }
 
             let op = '';
@@ -106,7 +103,7 @@ const filterToSQL = (item, res) => {
 
             //let val = typeof item[2] === 'number' ? item[2] : `'${item[1] === 'like' ? '%' + item[2] + '%' : item[2]}'`;
 
-            res += item[0] + ' ' + op + ' ' + val;
+            res += 'a.' + item[0] + ' ' + op + ' ' + val;
         }
         else
             item.map(it => {
@@ -147,28 +144,47 @@ const getOrderBy = (sort) => {
     return orderBy;
 }
 
+const whereToSQL = (where) => {
+    let res = [];
+
+    const parseVal = (el) => {
+        if (['BETWEEN', 'NOT BETWEEN'].includes(el.oper)) {
+            return el.dataType === 'number' ? `${el.values[0]} and ${el.values[1]}` : `'${el.values[0]}' and '${el.values[1]}'`;
+        }
+        else if (['IN', 'NOT IN'].includes(el.oper))
+            return '(' + el.values.join(', ') + ')';
+        else
+            return el.dataType === 'fk' ? el.values[0] : `'${el.values[0]}'`;
+    };
+
+    JSON.parse(where).forEach(el => {
+        res.push(`a.[${el.fk_fld}] ${el.oper} ${parseVal(el)}`);
+    });
+
+    return res.join(' and ');
+}
 
 let groupCash = []; // {filter, group, groupCount, data}
 let totalCash = []; // filter, totalCount
 
-app.get('/api/getData', async (req, res) => {
+const urlencodedParser = express.urlencoded({ extended: true });
+
+app.post('/api/getData', urlencodedParser, async (req, res) => {
+    console.log(req.body.params);
 
     res.set('Content-Type', 'application/json');
 
-    const { skip, take, group, groupSummary, totalSummary, requireTotalCount } = req.query;
+    const { skip, take, group, groupSummary, totalSummary, requireTotalCount, requireGroupCount } = req.body.params;
 
-    console.log(req.query);
+    let orderBy = getOrderBy(req.body.params.sort);
 
-    //const request = pool.request();
+    let filter = req.body.params.filter ? getFilter(req.body.params.filter) : '(1=1)';
+    let where = req.body.params.where ? whereToSQL(req.body.params.where) : "(2=2)";
 
-    let orderBy = getOrderBy(req.query.sort);
-
-    let filter = req.query.filter ? getFilter(req.query.filter) : '(1=1)';
-
-    if (requireTotalCount) {
-        let cash = totalCash.find(item => item.filter === filter);
+    if (requireTotalCount === 'true') {
+        let cash = totalCash.find(item => item.filter === filter && item.where === where);
         if (!cash) {
-            let arr = await store.query(`select Count(*) as totalCount from RZD.Data_A where ${filter}`);
+            let arr = await store.query(`select Count(*) as totalCount from RZD.Data_A a where ${filter} and ${where}`);
             store.totalCount = arr[0].totalCount;
             totalCash.push({ filter: filter, totalCount: arr[0].totalCount });
         }
@@ -184,41 +200,42 @@ app.get('/api/getData', async (req, res) => {
             const fk_fld = spr.fk_fld;
             const groupName = item.selector;
 
-            let cash = groupCash.find(el => el.filter === filter && el.group === groupName);
+            let cash = groupCash.find(el => el.filter === filter && el.group === groupName && el.desc === item.desc && el.where === where);
 
-            if (cash) {
-                groupCount = cash.groupCount;
+            if (requireGroupCount === 'true') {
+                if (cash) {
+                    groupCount = cash.groupCount;
+                }
+                else {
+                    const arr = await store.query(`select Count(distinct a.${fk_fld}) as cnt from RZD.Data_A a where ${filter} and ${where}`);
+                    groupCount = arr[0].cnt;
+                }
             }
-            else {
-                let arr = await store.query(`select Count(distinct ${fk_fld}) as cnt from RZD.Data_A where ${filter}`);
-                groupCount = arr[0].cnt;
-            }
-
-            //cash = groupCash.find(el => el.filter === filter && el.group === groupName);
 
             let data = [];
 
             if (cash) {
                 //arr = [{ items: null, count: cash.count, summa: cash.summa, data: cash.data }];
                 data = [...cash.data];
-                console.log('cash:', { filter: cash.filter, group: cash.group, groupCount: cash.groupCount });
+                console.log('cash:', { filter: cash.filter, group: cash.group, groupCount: cash.groupCount, where: cash.where });
             }
             else {
                 const sql = `
-                select ${spr.pk_display_fld} as "key", 
+                select 
+                    b.${spr.pk_display_fld} as "key", 
                     NULL as items,
                     Count(*) as "count",
-                Sum(CARGO_TONNAGE) as "summa"
+                Sum(a.CARGO_TONNAGE) as "summa"
                 from RZD.[Data_A] a
                 join ${spr.tab_name} b on b.${spr.pk_fld} = a.${spr.fk_fld}
-                where ${filter}
+                where ${filter} and ${where}
                 group by b.${spr.pk_display_fld}
-                order by b.${spr.pk_display_fld}`;
+                order by b.${spr.pk_display_fld} ${item.desc ? 'desc' : 'asc'}`;
 
                 arr = await store.query(sql);
 
                 data = [...arr];
-                groupCash.push({ filter: filter, group: groupName, groupCount: groupCount, data: arr });
+                groupCash.push({ filter: filter, group: groupName, groupCount: groupCount, desc: item.desc, where: where, data: arr });
             }
 
             //console.log(arr);
@@ -229,12 +246,15 @@ app.get('/api/getData', async (req, res) => {
                 });
             }
 
-            let result = { data: data, groupCount: groupCount };
+            let result = { data: data };
+            
+            if (groupCount)
+                result = { ...result, groupCount: groupCount };
 
             if (totalSummary)
                 result = { ...result, summary: [store.totalCount] };
 
-            if (requireTotalCount)
+            if (requireTotalCount === 'true')
                 result = { ...result, totalCount: store.totalCount };
 
             res.json(result);
@@ -243,8 +263,8 @@ app.get('/api/getData', async (req, res) => {
     }
 
     const SQL = `
-    select * from RZD.RZD_Data#02
-    where ${filter}
+    select * from RZD.RZD_Data#02 a
+    where ${filter} and ${where}
     order by ${orderBy}
     offset ${skip || 0} rows
     fetch next ${take || 1000} rows only`;
