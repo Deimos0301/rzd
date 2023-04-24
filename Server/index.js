@@ -293,3 +293,8 @@ app.post('/api/getData', urlencodedParser, async (req, res) => {
 
 });
 
+app.post('/api/setGridStruct', urlencodedParser, async (req, res) => {
+    const request = pool.request();
+    await request.query(`exec RZD.UpdateGridStruct @Json = '${JSON.stringify(req.body.json)}', @Profile_ID = ${req.body.Profile_ID}`);
+    res.end('OK');
+});

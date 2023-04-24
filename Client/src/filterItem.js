@@ -6,8 +6,7 @@ import DateBox from 'devextreme-react/date-box';
 import NumberBox from 'devextreme-react/number-box';
 import DropDownBox from 'devextreme-react/drop-down-box';
 import List from 'devextreme-react/list';
-import store from './store';
-import { toJS, values } from 'mobx';
+import store, {formatDate} from './store';
 import { observer } from 'mobx-react';
 import './filterItem.css';
 // import List from './list';
@@ -90,6 +89,7 @@ class FilterItem extends Component {
 
         this.state = {
             operSource: operSource,
+            checked: this.props.checked,
             disabled: false,
             fk_fld: this.props.fk_fld,
             oper: this.props.oper,
@@ -143,6 +143,7 @@ class FilterItem extends Component {
             case 'number':
                 arr = arr.filter(item => item.code !== 'IN' && item.code !== 'NOT IN');
                 break;
+            default: break;
         }
 
         if (isAuto) {
@@ -155,8 +156,6 @@ class FilterItem extends Component {
             this.setState({ operSource: arr, fk_fld: el.value, values: [], oper: oper });
             item.values = [];
         }
-
-
     }
 
     onOperChanged = (el) => {
@@ -170,7 +169,7 @@ class FilterItem extends Component {
             default:
                 this.selectionMode = 'single';
         };
-        console.log(store.filterItems);
+
         this.setState({ oper: el.value }, () => { this.makeValues(); });
     }
 
@@ -217,30 +216,52 @@ class FilterItem extends Component {
     }
 
     onDateChanged = (el) => {
-        let item = store.getFilterItem(this.props.uid);
-        item.values = [el.value];
+        const item = store.getFilterItem(this.props.uid);
+        item.values = [formatDate(el.value)];
+        this.setState({ values: item.values });
     }
 
     onDate1Changed = (el) => {
-        let item = store.getFilterItem(this.props.uid);
-        item.values[0] = el.value;
+        const item = store.getFilterItem(this.props.uid);
+        if (!Array.isArray(item.values)) item.values = [null, null];
+        item.values[0] = formatDate(el.value);
+        this.setState({ values: item.values });
     }
     onDate2Changed = (el) => {
-        let item = store.getFilterItem(this.props.uid);
-        item.values[1] = el.value;
+        const item = store.getFilterItem(this.props.uid);
+        if (!Array.isArray(item.values)) item.values = [null, null];
+        item.values[1] = formatDate(el.value);
+        this.setState({ values: item.values });
     }
 
     onNumber1Changed = (el) => {
-        let item = store.getFilterItem(this.props.uid);
+        const item = store.getFilterItem(this.props.uid);
+        if (!Array.isArray(item.values)) item.values = [null, null];
         item.values[0] = el.value;
+        this.setState({ values: item.values });
     }
+
     onNumber2Changed = (el) => {
-        let item = store.getFilterItem(this.props.uid);
+        const item = store.getFilterItem(this.props.uid);
+        if (!Array.isArray(item.values)) item.values = [null, null];
         item.values[1] = el.value;
+        this.setState({ values: item.values });
+    }
+
+    onNumberChanged = (el) => {
+        const item = store.getFilterItem(this.props.uid);
+        item.values = [el.value];
+        this.setState({ values: item.values });
+    }
+
+    dropDownValueChanged = (el) => {
+        this.setState({ values: el.value });
+        const item = store.getFilterItem(this.props.uid);
+        item.values = el.value;
     }
 
     makeValues = () => {
-        const { fk_fld, oper, values } = this.state;
+        const { fk_fld, oper, values, checked } = this.state;
         const atrib = store.tables.find(item => item.fk_fld === fk_fld);
 
         if (!atrib) return;
@@ -255,22 +276,22 @@ class FilterItem extends Component {
                                 atrib.dataType === 'date'
                                     ?
                                     <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', width: '26px', height: '27px', border: '1px solid #dee1e3', backgroundColor: '#dee1e3', justifyContent: 'center', alignItems: 'center', color: 'brown', fontWeight: '600' }}>C</div>
+                                        <div style={{ display: 'flex', width: '26px', height: '26px', border: '1px solid #dee1e3', justifyContent: 'center', alignItems: 'center', color: 'brown', fontWeight: '600' }}>C</div>
                                         <div style={{ color: '#000080', flexGrow: 1 }}>
-                                            <DateBox onValueChanged={this.onDate1Changed} className='date_box' value={this.state.values[0]} />
+                                            <DateBox onValueChanged={this.onDate1Changed} className='date_box' value={this.state.values[0]} disabled={!checked} inputAttr={{ class: 'valueComp' }} />
                                         </div>
-                                        <div style={{ display: 'flex', width: '26px', height: '27px', border: '1px solid #dee1e3', backgroundColor: '#dee1e3', justifyContent: 'center', alignItems: 'center', color: 'brown', fontWeight: '600' }}>ПO</div>
+                                        <div style={{ display: 'flex', width: '26px', height: '26px', border: '1px solid #dee1e3', justifyContent: 'center', alignItems: 'center', color: 'brown', fontWeight: '600' }}>ПO</div>
                                         <div style={{ color: '#000080', flexGrow: 1 }}>
-                                            <DateBox onValueChanged={this.onDate2Changed} className='date_box' value={this.state.values[1]} />
+                                            <DateBox onValueChanged={this.onDate2Changed} className='date_box' value={this.state.values[1]} disabled={!checked} inputAttr={{ class: 'valueComp' }} />
                                         </div>
                                     </div>
                                     :
                                     <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', width: '26px', height: '27px', border: '1px solid #dee1e3', backgroundColor: '#dee1e3', justifyContent: 'center', alignItems: 'center', color: 'brown', fontWeight: '600' }}>C</div>
-                                        <div style={{ color: '#000080', flexGrow: 1 }}><NumberBox value={this.state.values[0]} defaultValue={0} min={0} onValueChanged={this.onNumber1Changed} showSpinButtons={true} />
+                                        <div style={{ display: 'flex', width: '26px', height: '26px', border: '1px solid #dee1e3', justifyContent: 'center', alignItems: 'center', color: 'brown', fontWeight: '600' }}>C</div>
+                                        <div style={{ color: '#000080', flexGrow: 1 }}><NumberBox value={this.state.values[0]} defaultValue={0} min={0} onValueChanged={this.onNumber1Changed} showSpinButtons={true} disabled={!checked} inputAttr={{ class: 'valueComp' }} />
                                         </div>
-                                        <div style={{ display: 'flex', width: '26px', height: '27px', border: '1px solid #dee1e3', backgroundColor: '#dee1e3', justifyContent: 'center', alignItems: 'center', color: 'brown', fontWeight: '600' }}>ПO</div>
-                                        <div style={{ color: '#000080', flexGrow: 1 }}><NumberBox value={this.state.values[1]} defaultValue={1} min={0} onValueChanged={this.onNumber2Changed} showSpinButtons={true} />
+                                        <div style={{ display: 'flex', width: '26px', height: '26px', border: '1px solid #dee1e3', justifyContent: 'center', alignItems: 'center', color: 'brown', fontWeight: '600' }}>ПO</div>
+                                        <div style={{ color: '#000080', flexGrow: 1 }}><NumberBox value={this.state.values[1]} defaultValue={1} min={0} onValueChanged={this.onNumber2Changed} showSpinButtons={true} disabled={!checked} inputAttr={{ class: 'valueComp' }} />
                                         </div>
                                     </div>
                             }
@@ -282,7 +303,7 @@ class FilterItem extends Component {
                             {
                                 atrib.dataType === 'number'
                                     ?
-                                    <NumberBox defaultValue={0} min={0} showSpinButtons={true} showClearButton={true} />
+                                    <NumberBox defaultValue={0} min={0} showSpinButtons={true} showClearButton={true} onValueChanged={this.onNumberChanged} />
                                     :
                                     <DateBox onValueChanged={this.onDateChanged} type="date" />
                             }
@@ -303,16 +324,18 @@ class FilterItem extends Component {
                         deferRendering={false}
                         opened={this.state.isListOpened}
                         onOptionChanged={this.onDropDownBoxOpened}
+                        onValueChanged={this.dropDownValueChanged}
                         itemComponent={valueComp}
                         showClearButton={true}
                         inputAttr={{ class: "valueComp" }}
                         value={this.state.values}
+                        disabled={!checked}
                         valueExpr='value'
                         displayExpr='text'>
                     </DropDownBox>
                 );
 
-                break;
+            default: return <div></div>;
         };
     }
 
@@ -323,17 +346,19 @@ class FilterItem extends Component {
     }
 
     onCheckChanged = (el) => {
-        this.setState({ disabled: !el.value })
+        this.setState({ checked: el.value })
         let item = store.getFilterItem(this.props.uid);
-        item.disabled = !el.value;
+        item.checked = el.value;
     }
-    // цвет синий темно 3ий  столбец, заменить Селект - на дропдаунбокс, вываливаться будет лист с возможностью поиска 
+    
+    addClick = (el) => {
+        this.props.addFilterItem(this.props.uid);
+    }
+
 
     render() {
 
-
         return (
-            // <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', flexDirection: 'row-reverse' }}>
             <div style={{ display: 'flex', flexDirection: 'row', width: "100%", marginTop: "5px" }}>
                 <div>
                     <CheckBox iconSize={26} defaultValue={true} disabled={this.props.required} onValueChanged={this.onCheckChanged}></CheckBox>
@@ -344,7 +369,7 @@ class FilterItem extends Component {
                         displayExpr="fld_caption"
                         width={250}
                         deferRendering={false}
-                        disabled={this.state.disabled || this.props.disabled || this.props.required}
+                        disabled={!this.state.checked || this.props.required}
                         value={this.state.fk_fld}
                         placeholder="Атрибут"
                         showClearButton={false}
@@ -364,34 +389,20 @@ class FilterItem extends Component {
                         valueExpr='code'
                         displayExpr='text'
                         itemComponent={operComp}
-                        disabled={this.state.disabled || this.props.disabled || this.props.required}
+                        disabled={!this.state.checked || this.props.required}
                         inputAttr={{ id: 'operComp' }}
                         defaultValue={this.props.oper || '='}
                     />
 
                 </div>
+
                 <div style={{ flexGrow: '1' }}>
                     {this.makeValues()}
-
                 </div>
-
-
-                {/* <DropDownBox
-                    valueExpr="data"
-                    width={200}
-                    deferRendering={true}
-                    disabled={this.props.disabled}
-                    displayExpr="text"
-                    placeholder="Значение"
-                    showClearButton={false}
-                    itemComponent={valueComp}
-                    dataSource={store.tables}
-                    onValueChanged={this.makeValues}
-                /> */}
 
                 <div>
                     <Button icon="minus" type="danger" stylingMode="outlined" disabled={this.props.required} onClick={this.deleteFilterItem} />
-                    <Button icon="plus" type="normal" stylingMode="outlined" onClick={this.props.addFilterItem} />
+                    <Button icon="plus" type="normal" stylingMode="outlined" onClick={this.addClick} />
                 </div>
             </div>
 

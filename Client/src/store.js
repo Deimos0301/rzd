@@ -1,6 +1,5 @@
 //import React, {Component} from "react";
-import { action, observable, makeObservable } from 'mobx';
-import { toJS } from 'mobx';
+import { action, observable, makeObservable, toJS } from 'mobx';
 
 export const formatDate = (date, isRussian) => {
     if (!date) return null;
