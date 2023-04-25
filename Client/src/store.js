@@ -74,10 +74,16 @@ class Store {
         return this.filterItems.find(el => el.uid === uid);
     }
 
-    getGridStruct = async () => {
+    getGridStruct = async (Profile_ID) => {
         if (this.tables.length > 0) return;
 
-        const arr = await fetch('/api/getGridStruct');
+        const arr = await fetch('/api/getGridStruct', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ Profile_ID: Profile_ID })
+        });
         const js = await arr.json();
 
         this.setGridStruct(js);
@@ -92,7 +98,7 @@ class Store {
     getMetaData = async () => {
         await Promise.all([
             store.getTables(),
-            store.getGridStruct(),
+            store.getGridStruct(1),
             store.getMaxDate()
         ]
         );

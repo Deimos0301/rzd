@@ -49,8 +49,17 @@ app.get('/api/getSpr', (req, res) => {
     res.json(store.tables);
 });
 
-app.get('/api/getGridStruct', async (req, res) => {
-    const data = await store.getGridStruct();
+app.post('/api/getGridStruct', async (req, res) => {
+    const Profile_ID = req.body.Profile_ID || 1;
+    const data = await store.getGridStruct(Profile_ID);
+    res.json(data);
+});
+
+app.post('/api/resetGridParams', async (req, res) => {
+    const request = pool.request();
+    const Profile_ID = req.body.Profile_ID || 1;
+    await request.query(`exec RZD.ResetGridParams @Profile_ID = ${Profile_ID}`);
+    const data = await store.getGridStruct(Profile_ID);
     res.json(data);
 });
 

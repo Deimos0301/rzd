@@ -154,7 +154,7 @@ class App extends React.Component {
                 width: row.DISPLAY_WIDTH,
                 groupCellTemplate: GroupCell,
                 tab_name: src ? src.tab_name : undefined,
-                allowGrouping: row.DATA_TYPE != 'number',
+                allowGrouping: row.DATA_TYPE !== 'number',
                 visible: row.IS_VISIBLE,
                 sortOrder: row.SORT.toLowerCase(),
                 groupIndex: row.IS_GROUP ? maxGroupIndex : -1

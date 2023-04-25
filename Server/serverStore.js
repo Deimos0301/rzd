@@ -22,8 +22,8 @@ class Store {
         return arr.recordset;
     }
 
-    getGridStruct = async () => {
-        const rs = await this.request.query('exec RZD.GetGridStruct');
+    getGridStruct = async (Profile_ID) => {
+        const rs = await this.request.query(`exec RZD.GetGridStruct @Profile_ID = ${Profile_ID}`);
         return rs.recordset;
     };
 
